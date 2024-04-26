@@ -8,7 +8,7 @@ Scaffolding strategy for draft assembled contigs based on reference genes annota
 
 Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms that have a better reference assebly in with annotated genes in various databases. This strategy is most valuable when performing *de novo* assemblies of local species. The inplemented strategy aims to use the draft assembly, sequences of all genes from the reference genome and a table of their annotation in order to enhance scaffolding posibilities.
 
-**dScaff** recognizez the chromosomes associated to annotated genes in the reference genome and creates separate working directories. The script makes a subselection of genes that are more than 15k nt apart in the reference genome and performs BLAST between the sequences of these genes and the draft assembly. The BLAST results for each chromosome or for each scaffold within a chromosome in order to produce an indexed table and a map of draft assembly contigs in reference genome order. 
+**dScaff** recognizez the chromosomes associated to annotated genes in the reference genome and creates separate working directories. The script makes a subselection of genes that are more than 15k nt apart in the reference genome and performs BLAST between the sequences of these genes and the draft assembly. The BLAST results for each chromosome or for each scaffold within a chromosome which are filtered to only select genes longer than 2.5k nt and also select alingments that are at 30% of the gene length. The final results are an indexed table and a map of draft assembly contigs in reference genome order. 
 
 
 
