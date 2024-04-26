@@ -10,8 +10,6 @@ Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms 
 
 **dScaff** recognizez the chromosomes associated to annotated genes in the reference genome and creates separate working directories. The script makes a subselection of genes that are more than 15k nt apart in the reference genome and performs BLAST between the sequences of these genes and the draft assembly. The BLAST results for each chromosome or for each scaffold within a chromosome which are filtered to only select genes longer than 2.5k nt and also select alingments that are at 30% of the gene length. The final results are an indexed table and a map of draft assembly contigs in reference genome order. 
 
-
-
 #
 #
 ### Dependencies:
@@ -34,7 +32,7 @@ Information about **dScaff** can be obtained by running the script with the *-h*
 -g, --genes       gene.fna file with gene sequences from reference genome
 -d, --dataset     ncbi_dataset.tsv containing all genes in reference genome
 
-It is recommended to use the absolute paths for each file. The script will only work if all three arguments are provided.
+It is recommended to use the absolute paths for each file. The script will only work if all three arguments are provided. The file names should not contain dots in the name.
 
 #
 #
