@@ -30,9 +30,7 @@ Information about **dScaff** can be obtained by running the script with the *-h*
 
 **dScaff** takes as arguments:  
 -a, --assembly    Draft assembly in FASTA format.
-
 -g, --genes       gene.fna file with gene sequences from reference genome.
-
 -d, --dataset     ncbi_dataset.tsv containing all genes in reference genome.
 
 
