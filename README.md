@@ -29,9 +29,9 @@ Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms 
 Information about **dScaff** can be obtained by running the script with the *-h* or *--help* command. The script should be run from its main directory with either *bash* , *sh* or *./* prefixes. 
 
 **dScaff** takes as arguments:  
--a, --assembly    Draft assembly in FASTA format.\
--g, --genes       gene.fna file with gene sequences from reference genome.\
--d, --dataset     ncbi_dataset.tsv containing all genes in reference genome.\
+-a, --assembly    Draft assembly in FASTA format\
+-g, --genes       gene.fna file with gene sequences from reference genome\
+-d, --dataset     ncbi_dataset.tsv containing all genes in reference genome
 
 
 It is recommended to use the absolute paths for each file. The script will only work if all three arguments are provided. The file names should not contain dots in the name.
