@@ -1,5 +1,5 @@
 # dScaff
-Scaffolding strategy for draft assemblies (contigs) based on reference genes annotations
+Scaffolding strategy for draft assemblies (contigs) based on reference genes annotations.
 
 <div align="justify">
 
