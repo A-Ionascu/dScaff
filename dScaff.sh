@@ -341,7 +341,9 @@ echo "Finished !"
 
 END=$(date +%s)
 DIFF=$(( $END - $START ))
+time=$(expr $DIFF / 60)
 echo "dScaff ran for $DIFF seconds"
+echo "That's around $time minutes"
 
 # CWD este dScaff folder
 # subdir este folder cu numele asamblarii
