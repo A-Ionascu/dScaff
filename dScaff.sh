@@ -106,6 +106,8 @@ fi
 #done
 
 
+START=$(date +%s)
+
 ###
 # First part --> filter genes by chromosomes
 ###
@@ -227,14 +229,100 @@ cd $subdir
 
 Rscript contigs_mapping.R 2> /dev/null
 
+############################
+cd $CWD
+grep ">" $assembly > headers_assembly.txt
+############################
+cd $subdir
+
 ls -d ./*/ | while read line
 do
 cd $line
+
 mkdir tmp
 mv *.csv tmp
 mv *.txt tmp
 mv *.fasta tmp
 
+#######################################
+if [ -d "chromosome" ]; then
+cd chromosome/
+##################################################################################################################
+sed -i 's/"//g' *selected_contigs.csv 
+sed -i 's/,/ /g' *selected_contigs.csv
+#Pentru fiecare fisier care se termina cu selected_contigs.csv, il parcurg cu while, apoi extrag headerele de interes in baza fisierului cu all headers.
+for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
+
+#Adaug o coloana care contine cromozomul si scaffoldul.
+for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
+
+#Elimin ">".
+sed -i 's/>//g' *selected.headers.txt
+
+#Extrag contigurile, dar nu sunt in ordine.
+for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
+
+#Sparg fisierul fasta ce contine contiguri.
+awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
+
+#Am ordonat contigurile
+cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
+rm -r *.fna
+rm -r *.new1.assembly.fasta
+
+for chr in *.dScaff.assembly1.fasta
+do
+awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+sed -i "s/>/>${chr%.dScaff.assembly1.fasta} /g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+done
+rm -r contigs_chr_loc.txt
+rm -r *.dScaff.assembly1.fasta
+##################################################################################################################
+
+fi
+#######################################
+#######################################
+if [ -d "scaffolds" ]; then
+cd scaffolds
+ls -d ./*/ | while read scaff
+do
+cd $scaff
+
+##################################################################################################################
+sed -i 's/"//g' *selected_contigs.csv 
+sed -i 's/,/ /g' *selected_contigs.csv
+#Pentru fiecare fisier care se termina cu selected_contigs.csv, il parcurg cu while, apoi extrag headerele de interes in baza fisierului cu all headers.
+for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
+
+#Adaug o coloana care contine cromozomul si scaffoldul.
+for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
+
+#Elimin ">".
+sed -i 's/>//g' *selected.headers.txt
+
+#Extrag contigurile, dar nu sunt in ordine.
+for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
+
+#Sparg fisierul fasta ce contine contiguri.
+awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
+
+#Am ordonat contigurile
+cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
+rm -r *.fna
+rm -r *.new1.assembly.fasta
+
+for chr in *.dScaff.assembly1.fasta
+do
+awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+sed -i "s/>/>${chr%.dScaff.assembly1.fasta} /g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+done
+rm -r contigs_chr_loc.txt
+rm -r *.dScaff.assembly1.fasta
+##################################################################################################################
+cd -
+done
+fi
+#######################################
 cd $CWD/$subdir
 
 
@@ -251,5 +339,11 @@ echo " "
 echo "Finished !"
 ### End
 
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+echo "dScaff ran for $DIFF seconds"
 
+# CWD este dScaff folder
+# subdir este folder cu numele asamblarii
+# line este folder cu numele chromozomului
 
