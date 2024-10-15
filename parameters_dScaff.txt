@@ -1,0 +1,9 @@
+Adjust the value of parameters:
+minimum_distance_between_genes = 15000
+minimum_gene_length = 2500
+first_blast_alignment_threshold = 0,5
+second_blast_alignment_threshold = 0,4
+third_blast_alignment_threshold = 0,3
+minimum_missing_hits_within_contig_fragments = 10
+minimum__hits_for_contig_fragments = 1
+minimum_hits_for_red_contig_fragments = 2
