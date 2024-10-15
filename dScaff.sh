@@ -390,7 +390,7 @@ cd $CWD
 rm -r assembly_database
 rm headers_assembly.txt
 
-find . -name queries -type d -exec rm -rf {} 
+find . -name queries -type d -exec rm -rf {} +
 
 
 echo " "
