@@ -108,6 +108,29 @@ fi
 
 START=$(date +%s)
 
+
+### spinner function
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf "  %c  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+
+
+
+
+
+
+
 ###
 # First part --> filter genes by chromosomes
 ###
@@ -184,15 +207,39 @@ awk -F ">| " '/^>/ {s=$2".query.fasta"}; {print > s}' queries_of_interest.fasta
 
 mv *.query.fasta ./queries
 
+cd ./queries
+file_count=$(ls *.fasta | wc -l)
+current_file=0
+cd ..
+
 threads=$(nproc --all)
 
+for i in queries/*.query.fasta
+do
 
-for i in queries/*.query.fasta; do blastn -db $CWD/assembly_database/*.fasta -query $i -out ${i%.query.fasta}".lucru.csv" -outfmt 6 -num_threads $threads; done
+((current_file++))
+percent=$(( 100 * current_file / file_count ))
+
+blastn -db $CWD/assembly_database/*.fasta -query $i -out ${i%.query.fasta}".lucru.csv" -outfmt 6 -num_threads $threads
+
+# build progress bar
+    progress_bar=""
+    for ((j=0; j<percent; j+=2)); do
+        progress_bar="${progress_bar}#"
+    done
+    for ((j=percent; j<100; j+=2)); do
+        progress_bar="${progress_bar}-"
+    done
+# print progress bar
+echo -ne "[${progress_bar}] ${percent} %\r"
+
+done
 
 for i in queries/*.query.fasta; do lung=$( echo $i | sed -e '1d' $i | wc -c ); length=$( expr $lung - 1 ); awk -v Length=$length -F "\t" '{ FS = OFS = "\t" } {print $0,Length}' ${i%.query.fasta}".lucru.csv" > ${i%.query.fasta}".csv"; done
 
-rm -r queries/*.query.fasta queries/*.lucru.csv
 
+rm -r queries/*.query.fasta queries/*.lucru.csv
+#rm -r queries
 
 cd $CWD/$subdir
 rm headers_list_db.txt
@@ -204,6 +251,7 @@ done
 ###
 # Third part --> map draft assembly contigs using the genes of interest
 ###
+echo " "
 echo " "
 echo "Indexing and mapping contigs ..."
 echo " "
@@ -229,7 +277,8 @@ cp contigs_mapping.R $subdir
 cp parameters_dScaff.txt $subdir
 cd $subdir
 
-Rscript contigs_mapping.R 2> /dev/null
+Rscript contigs_mapping.R 2> /dev/null &
+spinner $!
 rm parameters_dScaff.txt
 
 ############################
@@ -329,6 +378,7 @@ fi
 cd $CWD/$subdir
 
 
+
 done
 
 rm query_filtering.R
@@ -339,6 +389,9 @@ cd $CWD
 #mv assembly_database $subdir
 rm -r assembly_database
 rm headers_assembly.txt
+
+find . -name queries -type d -exec rm -rf {} 
+
 
 echo " "
 echo "Finished !"
