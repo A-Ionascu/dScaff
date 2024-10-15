@@ -2,20 +2,20 @@
 
 # Input files: 
 # -a (assembly) = draft assembly in FASTA format
-# -g (genes) = gene.fna file with gene sequences from reference genome
-# -d (dataset) = ncbi_dataset.tsv containing all genes in reference genome
+# -q (query) = gene.fna file with gene sequences from reference genome or ranked_queries.fasta output of ranked queries SubSequencesExtractor.sh script
+# -d (dataset) = ncbi_dataset.tsv containing all genes in reference genome or coordinates_dataset.csv output of ranked queries SubSequencesExtractor.sh script
 
 
 # Define the help method
 get_help() {
   echo " "
-  echo "Usage: $(basename $0) [-h] [-a FILE] [-g FILE] [-d FILE]"
+  echo "Usage: $(basename $0) [-h] [-a FILE] [-q FILE] [-d FILE]"
   echo " "
   echo "Options:"
   echo "  -h, --help        Display this help message"
   echo "  -a, --assembly    Draft assembly in FASTA format"
-  echo "  -g, --genes       gene.fna file with gene sequences from reference genome"
-  echo "  -d, --dataset     ncbi_dataset.tsv containing all genes in reference genome"
+  echo "  -q, --query     gene.fna file with gene sequences from reference genome or ranked_queries.fasta output of ranked queries SubSequencesExtractor.sh script"
+  echo "  -d, --dataset     ncbi_dataset.tsv containing all genes in reference genome or coordinates_dataset.csv output of ranked queries SubSequencesExtractor.sh script"
   echo " "
   echo "Use files from working directory or provide absolute path to input files."
   echo " "
@@ -48,14 +48,14 @@ while [ ! -z "$1" ]; do
             exit 1
          fi         
          ;;
-     --genes|-g)
+     --query|-q)
          shift
          echo " "
-         echo "Input reference gene sequences is: $1"
+         echo "Input reference query sequences is: $1"
          #echo " "
-         genes=$1
+         query=$1
          if [ -z "$1" ]; then
-            echo "Error: Missing argument for reference genes sequences."
+            echo "Error: Missing argument for reference query sequences."
             echo " "
             exit 1
          fi  
@@ -63,11 +63,11 @@ while [ ! -z "$1" ]; do
      --dataset|-d)
         shift
         echo " "
-        echo "Input genes dataset is: $1"
+        echo "Input dataset is: $1"
         #echo " "
         dataset=$1 
         if [ -z "$1" ]; then
-            echo "Error: Missing argument for genes dataset."
+            echo "Error: Missing argument for dataset."
             echo " "
             exit 1
          fi         
@@ -84,13 +84,13 @@ if [ "$assembly" == "" ]; then
     echo " "
     exit 1
 fi
-if [ "$genes" == "" ]; then
-    echo "Error: Missing input reference genes file"
+if [ "$query" == "" ]; then
+    echo "Error: Missing input reference query file"
     echo " "
     exit 1
 fi
 if [ "$dataset" == "" ]; then
-    echo "Error: Missing input genes dataset file"
+    echo "Error: Missing input dataset file"
     echo " "
     exit 1
 fi
@@ -100,13 +100,36 @@ fi
 #do
 #    case "${flag}" in
 #        a) assembly=${OPTARG};;
-#        g) genes=${OPTARG};;
+#        g) query=${OPTARG};;
 #        d) dataset=${OPTARG};;
 #    esac
 #done
 
 
 START=$(date +%s)
+
+
+### spinner function
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf "  %c  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+
+
+
+
+
+
 
 ###
 # First part --> filter genes by chromosomes
@@ -123,7 +146,7 @@ sed -i '/^$/d' chromosomes.txt
 subdir="$(basename -- ${assembly%%.*})"
 mkdir $subdir
 
-echo "Selecting genes for each chromosome ..."
+echo "Selecting queries for each chromosome ..."
 echo " "
 cat chromosomes.txt | while read line 
 do 
@@ -133,17 +156,17 @@ done
 mv chromosomes.txt $subdir
 
 
-echo "Filtering genes datasets ..."
+echo "Filtering datasets ..."
 echo " "
-cp gene_filtering.R $subdir
+cp query_filtering.R $subdir
+cp parameters_dScaff.txt $subdir
 cd $subdir
-Rscript gene_filtering.R
-
- 
+Rscript query_filtering.R
+rm parameters_dScaff.txt
 
 
 ###
-# Second part --> blastn between each gene of interest and draft assembly
+# Second part --> blastn between each query of interest and draft assembly
 ###
 
 cd $CWD
@@ -155,7 +178,7 @@ cd assembly_database
 makeblastdb -in *.fasta -dbtype nucl
 cd $CWD/$subdir/
 
-echo "Performing BLAST for selected genes ..."
+echo "Performing BLAST for selected queries ..."
 echo " "
 ls -d ./*/ | while read line
 do 
@@ -166,33 +189,57 @@ cd $line
 
 echo "Entered " $line
 
-awk -F "," 'NR > 1 {print $2":"$3"-"$4}' *_filtered.csv > gene_headers.txt
-sed -i 's/"//g' gene_headers.txt
+awk -F "," 'NR > 1 {print $2":"$3"-"$4}' *_filtered.csv > query_headers.txt
+sed -i 's/"//g' query_headers.txt
 
 cd $CWD/$subdir
-grep ">" $genes | sed 's/>//g' > headers_list_db.txt
+grep ">" $query | sed 's/>//g' > headers_list_db.txt
 
 cd $line
-cat gene_headers.txt | while read gene; do grep $gene ../headers_list_db.txt >> gene_headers_db.txt; done
+cat query_headers.txt | while read subquery; do grep $subquery ../headers_list_db.txt >> query_headers_db.txt; done
 
 
-seqtk subseq $genes gene_headers_db.txt > genes_of_interest.fasta
+seqtk subseq $query query_headers_db.txt > queries_of_interest.fasta
 
-mkdir genes
+mkdir queries
 
-awk -F ">| " '/^>/ {s=$2".gene.fasta"}; {print > s}' genes_of_interest.fasta
+awk -F ">| " '/^>/ {s=$2".query.fasta"}; {print > s}' queries_of_interest.fasta
 
-mv *.gene.fasta ./genes
+mv *.query.fasta ./queries
+
+cd ./queries
+file_count=$(ls *.fasta | wc -l)
+current_file=0
+cd ..
 
 threads=$(nproc --all)
 
+for i in queries/*.query.fasta
+do
 
-for i in genes/*.gene.fasta; do blastn -db $CWD/assembly_database/*.fasta -query $i -out ${i%.gene.fasta}".lucru.csv" -outfmt 6 -num_threads $threads; done
+((current_file++))
+percent=$(( 100 * current_file / file_count ))
 
-for i in genes/*.gene.fasta; do lung=$( echo $i | sed -e '1d' $i | wc -c ); length=$( expr $lung - 1 ); awk -v Length=$length -F "\t" '{ FS = OFS = "\t" } {print $0,Length}' ${i%.gene.fasta}".lucru.csv" > ${i%.gene.fasta}".csv"; done
+blastn -db $CWD/assembly_database/*.fasta -query $i -out ${i%.query.fasta}".lucru.csv" -outfmt 6 -num_threads $threads
 
-rm -r genes/*.gene.fasta genes/*.lucru.csv
+# build progress bar
+    progress_bar=""
+    for ((j=0; j<percent; j+=2)); do
+        progress_bar="${progress_bar}#"
+    done
+    for ((j=percent; j<100; j+=2)); do
+        progress_bar="${progress_bar}-"
+    done
+# print progress bar
+echo -ne "[${progress_bar}] ${percent} %\r"
 
+done
+
+for i in queries/*.query.fasta; do lung=$( echo $i | sed -e '1d' $i | wc -c ); length=$( expr $lung - 1 ); awk -v Length=$length -F "\t" '{ FS = OFS = "\t" } {print $0,Length}' ${i%.query.fasta}".lucru.csv" > ${i%.query.fasta}".csv"; done
+
+
+rm -r queries/*.query.fasta queries/*.lucru.csv
+#rm -r queries
 
 cd $CWD/$subdir
 rm headers_list_db.txt
@@ -205,19 +252,21 @@ done
 # Third part --> map draft assembly contigs using the genes of interest
 ###
 echo " "
+echo " "
 echo "Indexing and mapping contigs ..."
+echo " "
 ls -d ./*/ | while read line
 do 
 
 #[[ ! -d "line" ]] && continue
- 
+
 cd $CWD/$subdir/$line
 
-#echo "Entered " $line
+echo "Entered " $line
 
-mv *_distances_filtered.csv genes_filtered.csv
+mv *_distances_filtered.csv query_filtered.csv
 
-cd genes
+cd queries
 find . -name '*' -size 0 -print0 | xargs -0 rm 2> /dev/null
 
 
@@ -225,9 +274,12 @@ done
 
 cd $CWD
 cp contigs_mapping.R $subdir
+cp parameters_dScaff.txt $subdir
 cd $subdir
 
-Rscript contigs_mapping.R 2> /dev/null
+Rscript contigs_mapping.R 2> /dev/null &
+spinner $!
+rm parameters_dScaff.txt
 
 ############################
 cd $CWD
@@ -326,24 +378,41 @@ fi
 cd $CWD/$subdir
 
 
+
 done
 
-rm gene_filtering.R
+rm query_filtering.R
 rm contigs_mapping.R
 rm chromosomes.txt
 
 cd $CWD
-mv assembly_database $subdir
+#mv assembly_database $subdir
+rm -r assembly_database
+rm headers_assembly.txt
+
+find . -name queries -type d -exec rm -rf {} +
+
 
 echo " "
 echo "Finished !"
 ### End
-
+echo " "
 END=$(date +%s)
-DIFF=$(( $END - $START ))
-time=$(expr $DIFF / 60)
-echo "dScaff ran for $DIFF seconds"
-echo "That's around $time minutes"
+seconds=$(( $END - $START ))
+minutes=$(echo "scale=1; $seconds / 60" | bc)
+hours=$(echo "scale=1; $seconds / 3600" | bc)
+
+if [[ $seconds -ge 360 ]] 
+then
+echo "dScaff ran for $hours hours (that's $minutes minutes or $seconds seconds)."
+elif [[ $seconds -ge 60 ]]
+then
+echo "dScaff ran for $minutes minutes (that's $seconds seconds)."
+else
+echo "dScaff ran for $seconds seconds."
+fi
+
+echo " "
 
 # CWD este dScaff folder
 # subdir este folder cu numele asamblarii

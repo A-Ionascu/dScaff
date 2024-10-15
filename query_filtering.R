@@ -33,6 +33,10 @@ setwd(paste(getwd(),sep=""))
 
 
 
+parameters <- read.table("parameters_dScaff.txt",header=TRUE, sep=".")
+parm1 <- as.numeric(unlist(strsplit(parameters[1,], " "))[3])
+
+
 # read the files in input directory
 all.files <- list.files(getwd())
 tsv.files <- grep(".tsv",all.files,value=T)
@@ -89,7 +93,7 @@ for(f in tsv.files){
       distance <- abs(chr$stop[i] - chr$start[j]) # calculate distance
     
     
-      if( distance <= 15000 ){ # distance condition bad
+      if( distance <= parm1 ){ # distance condition bad
         j <- j + 1 # jump to next gene to compare
         
         if(j > nrow(chr)){ # do not go over table end
