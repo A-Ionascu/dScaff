@@ -11,6 +11,19 @@ if (any(installed_packages == FALSE)) {
 suppressWarnings(suppressMessages(invisible(lapply(packages, library, character.only = TRUE))))
 
 
+# preparing parameters
+parameters <- read.table("parameters_dScaff.txt",header=TRUE, sep=".")
+
+parm1 <- as.numeric(unlist(strsplit(parameters[1,], " "))[3])
+parm2 <- as.numeric(unlist(strsplit(parameters[2,], " "))[3])
+parm3 <- as.numeric(unlist(strsplit(unlist(strsplit(parameters[3,], " "))[3],","))[2]) / 10
+parm4 <- as.numeric(unlist(strsplit(unlist(strsplit(parameters[4,], " "))[3],","))[2]) / 10
+parm5 <- as.numeric(unlist(strsplit(unlist(strsplit(parameters[5,], " "))[3],","))[2]) / 10
+parm6 <- as.numeric(unlist(strsplit(parameters[6,], " "))[3])
+parm7 <- as.numeric(unlist(strsplit(parameters[7,], " "))[3])
+parm8 <- as.numeric(unlist(strsplit(parameters[8,], " "))[3])
+#
+
 
 mainDir <- (paste(getwd(),sep=""))
 
@@ -19,7 +32,7 @@ directories <- list.dirs(recursive=FALSE)
 
 for(d in directories){
   dir <- gsub("./","",d)
-  path <- file.path(mainDir,dir,"genes")
+  path <- file.path(mainDir,dir,"queries")
   setwd(path)
   
 
@@ -46,30 +59,30 @@ for(d in directories){
 
 
 
-  if(data$gene_length[1] <= 2500){
+  if(data$gene_length[1] <= parm2){
     next
   }
   
   else{
     
-    if(any(data$length >= data$gene_length[1] * 0.5)){
-      hgl <- data$gene_length[1] * 0.5
+    if(any(data$length >= data$gene_length[1] * parm3)){
+      hgl <- data$gene_length[1] * parm3
       aliniament <- data[which(data$length >= hgl),]
       contigs_of_interest <- rbind(contigs_of_interest, aliniament)  
       contigs_of_interest <- contigs_of_interest[!duplicated(contigs_of_interest),]
       next }
     
     else{
-      if(any(data$length >= data$gene_length[1] * 0.4)){
-        hgl <- data$gene_length[1] * 0.4
+      if(any(data$length >= data$gene_length[1] * parm4)){
+        hgl <- data$gene_length[1] * parm4
         aliniament <- data[which(data$length >= hgl),]
         contigs_of_interest <- rbind(contigs_of_interest, aliniament)
         contigs_of_interest <- contigs_of_interest[!duplicated(contigs_of_interest),]
         next }
       
       else{
-        if(any(data$length >= data$gene_length[1] * 0.3)){
-          hgl <- data$gene_length[1] * 0.3
+        if(any(data$length >= data$gene_length[1] * parm5)){
+          hgl <- data$gene_length[1] * parm5
           aliniament <- data[which(data$length >= hgl),]
           contigs_of_interest <- rbind(contigs_of_interest, aliniament)  
           contigs_of_interest <- contigs_of_interest[!duplicated(contigs_of_interest),]
@@ -91,7 +104,7 @@ for(d in directories){
 
   setwd(file.path(mainDir,dir))
 
-  genes_of_interest <- read.csv("genes_filtered.csv")
+  genes_of_interest <- read.csv("query_filtered.csv")
 
   contigs_of_interest <- add_column(contigs_of_interest, genomic_start=NA, .before="E_value")
   contigs_of_interest <- add_column(contigs_of_interest, genomic_end=NA, .before="E_value")
@@ -135,7 +148,7 @@ for(d in directories){
       scaff_int <- contigs_of_interest %>%
         filter(ref_scaff == s)
       
-      scaff_int <- scaff
+      scaff <- scaff_int
       
       #########################################################################
       #########################################################################
@@ -193,18 +206,18 @@ for(d in directories){
           
           
           if(nrow(contig) > 1){
-            if(any(diff(rows) > 10)){
+            if(any(diff(rows) >= parm6)){
               
-              breaks <- c(0, which(diff(rows) > 10), length(rows))  
+              breaks <- c(0, which(diff(rows) >= parm6), length(rows))  
               breaks_list <- sapply(seq(length(breaks) - 1),function(i) rows[(breaks[i] + 1):breaks[i+1]])
               
               if(typeof(breaks_list) == "list"){
                 
-                if(any(lengths(breaks_list) >= 1)){ #### aici era 3
+                if(any(lengths(breaks_list) >= parm7)){ #### aici era 3
                   
                   for(sequence in seq(1,length(breaks_list),1)){
                     
-                    if(length(breaks_list[[sequence]]) >= 1){ #### aici era 3
+                    if(length(breaks_list[[sequence]]) >= parm7){ #### aici era 3
                       partial_contig <- sample_cns[breaks_list[[sequence]],]
                       edited_sample_cns[n,] <- partial_contig[1,]
                       edited_sample_cns$start[n] <- min(partial_contig$start)
@@ -309,7 +322,7 @@ for(d in directories){
         ggtitle("Contigs mapping on scaffold") +
         # supress scientific notation on the y-axis
         # scale_y_continuous(labels = comma) +
-        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
         ylab("Scaffold (bp)")  +
         theme(legend.position = "none")
       
@@ -321,15 +334,37 @@ for(d in directories){
       
       #####################################
       ### Adding blue lines
-      
+      gene_frequency <- sample_cns %>% count(gene)
       for(i in seq(1,nrow(sample_cns),1)){
         included_rows <- intersect(which(sample_cns$start < sample_cns$start[i]),
                                    which(sample_cns$end > sample_cns$end[i]))
         if(length(included_rows) != 0){
           sample_cns$CNA[i] <- "loss"  }
-        if(sample_cns$fragments[i] < 3){
+        
+        semi_included_rows_equal_start <- intersect(which(sample_cns$start == sample_cns$start[i]),
+                                                    which(sample_cns$end > sample_cns$end[i]))
+        if(length(semi_included_rows_equal_start) != 0){
+          sample_cns$CNA[i] <- "loss"  }
+        semi_included_rows_equal_end <- intersect(which(sample_cns$start < sample_cns$start[i]),
+                                                  which(sample_cns$end == sample_cns$end[i]))
+        if(length(semi_included_rows_equal_end) != 0){
+          sample_cns$CNA[i] <- "loss"  }
+        
+        
+        if(sample_cns$fragments[i] <= parm8){
           sample_cns$CNA[i] <- "loss" }
         
+        repeated_rows <- intersect(which(sample_cns$start == sample_cns$start[i]), 
+                                   which(sample_cns$end == sample_cns$end[i]))
+        if(length(repeated_rows) != 1){
+          repeated_rows_frequency <- gene_frequency %>% 
+            filter(gene_frequency$gene %in% levels(droplevels(sample_cns$gene[repeated_rows])))
+          row_of_interest <- repeated_rows_frequency[which(repeated_rows_frequency$n == min(repeated_rows_frequency$n), arr.ind = TRUE)[1],]
+          rows_to_eliminate <- repeated_rows[-which(repeated_rows_frequency$gene == row_of_interest[,1])]
+          if(length(rows_to_eliminate)  != 0){
+            for(rr in rows_to_eliminate){
+              sample_cns$CNA[rr] <- "loss"
+            }}}
       }
       
       sample_cns_unfiltered <- sample_cns
@@ -365,7 +400,7 @@ for(d in directories){
                                          ymax = end, ymin = start, fill = CNA)) + 
         scale_fill_manual(values = group.colors) +
         ggtitle("Contigs mapping on scaffold") +
-        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
         ylab("Scaffold (bp)")  +
         theme(legend.position = "none")
       
@@ -410,7 +445,7 @@ for(d in directories){
                                          ymax = end, ymin = start, fill = CNA)) + 
         scale_fill_manual(values = group.colors) +
         ggtitle("Contigs mapping on scaffold") +
-        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
         ylab("Scaffold (bp)")  +
         theme(legend.position = "none")
       
@@ -660,23 +695,23 @@ for(d in directories){
         
         
         if(nrow(contig) > 1){
-          if(any(diff(rows) > 10)){
+          if(any(diff(rows) >= parm6)){
             
-            breaks <- c(0, which(diff(rows) > 10), length(rows))  
+            breaks <- c(0, which(diff(rows) >= parm6), length(rows))  
             breaks_list <- sapply(seq(length(breaks) - 1),function(i) rows[(breaks[i] + 1):breaks[i+1]])
             
             if(typeof(breaks_list) == "list"){
               
-              if(any(lengths(breaks_list) >= 1)){ #### aici era 3
+              if(any(lengths(breaks_list) >= parm7)){ #### aici era 3
                 
                 for(sequence in seq(1,length(breaks_list),1)){
                   
-                  if(length(breaks_list[[sequence]]) >= 1){ #### aici era 3
+                  if(length(breaks_list[[sequence]]) >= parm7){ #### aici era 3
                     partial_contig <- sample_cns[breaks_list[[sequence]],]
                     edited_sample_cns[n,] <- partial_contig[1,]
                     edited_sample_cns$start[n] <- min(partial_contig$start)
                     edited_sample_cns$end[n] <- max(partial_contig$end)
-                    edited_sample_cns$fragments[n] <- nrow(partial_contig)
+                    edited_sample_cns$fragments[n] <- length(unique(partial_contig$chromosome))
                     n <- n+1
                   }
                 }
@@ -697,7 +732,7 @@ for(d in directories){
         edited_sample_cns[n,] <- contig[1,]
         edited_sample_cns$start[n] <- min(contig$start)
         edited_sample_cns$end[n] <- max(contig$end)
-        edited_sample_cns$fragments[n] <- nrow(contig)
+        edited_sample_cns$fragments[n] <- length(unique(contig$chromosome))
         n <- n+1 }
     }
     
@@ -776,7 +811,7 @@ for(d in directories){
       ggtitle("Contigs mapping on scaffold") +
       # supress scientific notation on the y-axis
       # scale_y_continuous(labels = comma) +
-      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
       ylab("Scaffold (bp)")  +
       theme(legend.position = "none")
     
@@ -788,15 +823,37 @@ for(d in directories){
     
     #####################################
     ### Adding blue lines
-    
+    gene_frequency <- sample_cns %>% count(gene)
     for(i in seq(1,nrow(sample_cns),1)){
       included_rows <- intersect(which(sample_cns$start < sample_cns$start[i]),
                                  which(sample_cns$end > sample_cns$end[i]))
       if(length(included_rows) != 0){
         sample_cns$CNA[i] <- "loss"  }
-      if(sample_cns$fragments[i] < 3){
+      
+      semi_included_rows_equal_start <- intersect(which(sample_cns$start == sample_cns$start[i]),
+                                                  which(sample_cns$end > sample_cns$end[i]))
+      if(length(semi_included_rows_equal_start) != 0){
+        sample_cns$CNA[i] <- "loss"  }
+      semi_included_rows_equal_end <- intersect(which(sample_cns$start < sample_cns$start[i]),
+                                                  which(sample_cns$end == sample_cns$end[i]))
+      if(length(semi_included_rows_equal_end) != 0){
+        sample_cns$CNA[i] <- "loss"  }
+      
+      
+      if(sample_cns$fragments[i] <= parm8){
         sample_cns$CNA[i] <- "loss" }
       
+      repeated_rows <- intersect(which(sample_cns$start == sample_cns$start[i]), 
+                                 which(sample_cns$end == sample_cns$end[i]))
+      if(length(repeated_rows) != 1){
+        repeated_rows_frequency <- gene_frequency %>% 
+          filter(gene_frequency$gene %in% levels(droplevels(sample_cns$gene[repeated_rows])))
+        row_of_interest <- repeated_rows_frequency[which(repeated_rows_frequency$n == min(repeated_rows_frequency$n), arr.ind = TRUE)[1],]
+        rows_to_eliminate <- repeated_rows[-which(repeated_rows_frequency$gene == row_of_interest[,1])]
+        if(length(rows_to_eliminate)  != 0){
+          for(rr in rows_to_eliminate){
+            sample_cns$CNA[rr] <- "loss"
+          }}}
     }
     
     sample_cns_unfiltered <- sample_cns
@@ -832,7 +889,7 @@ for(d in directories){
                                        ymax = end, ymin = start, fill = CNA)) + 
       scale_fill_manual(values = group.colors) +
       ggtitle("Contigs mapping on scaffold") +
-      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
       ylab("Scaffold (bp)")  +
       theme(legend.position = "none")
     
@@ -877,7 +934,7 @@ for(d in directories){
                                        ymax = end, ymin = start, fill = CNA)) + 
       scale_fill_manual(values = group.colors) +
       ggtitle("Contigs mapping on scaffold") +
-      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = 250000),1)) +
+      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
       ylab("Scaffold (bp)")  +
       theme(legend.position = "none")
     
