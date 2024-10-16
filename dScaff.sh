@@ -279,6 +279,7 @@ cd $subdir
 
 Rscript contigs_mapping.R 2> /dev/null &
 spinner $!
+echo "Done!"
 rm parameters_dScaff.txt
 
 ############################
