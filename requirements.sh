@@ -1,6 +1,6 @@
 #!/bin/bash
 
-chmod +x script_complet_arguments_help.sh
+chmod +x dScaff.sh
 
 cd ~/Downloads
 sudo apt install -y ncbi-blast+

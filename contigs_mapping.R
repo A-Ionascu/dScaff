@@ -167,6 +167,72 @@ for(d in directories){
       row.names = c(NA,nrow(scaff)), class = "data.frame" )
       
       
+      #########################################################################
+      #########################################################################
+      #########################################################################
+      #########################################################################
+      
+      # Unprocessed contigs 
+      
+      chrom_sizes <- structure(list(
+        chromosome = unique(sample_cns$gene), 
+        size = rep(c(max(sample_cns$size)),length(unique(sample_cns$gene)))),
+        .Names = c("chromosome", "size"),
+        class = "data.frame", row.names= c(NA,length(unique(sample_cns$gene))))
+      chrom_order <- c(unique(chrom_sizes$chromosome))
+      chrom_key <- setNames(object = as.character(c(seq(1,length(unique(sample_cns$gene)),1))),
+                            nm = chrom_order)
+      chrom_order <- factor(x = chrom_order, levels = rev(chrom_order))
+      chrom_sizes[["chromosome"]] <- factor(x = chrom_sizes[["chromosome"]], 
+                                            levels = chrom_order)
+      sample_cns[["gene"]] <- factor(x = sample_cns[["gene"]], 
+                                     levels = chrom_order)
+      group.colors <- c(gain = "red", loss = "blue")
+      
+      ggplot(data = chrom_sizes) + 
+        geom_rect(aes(xmin = as.numeric(chromosome) - 0.2, 
+                      xmax = as.numeric(chromosome) + 0.2, 
+                      ymax = size, ymin = 0), 
+                  colour="white", fill = "white") + 
+        coord_flip() +
+        theme( 
+          panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          panel.background = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+        scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+        ) +
+        geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
+                                         xmax = as.numeric(gene) + 0.2, 
+                                         ymax = end, ymin = start, fill = CNA)) + 
+        scale_fill_manual(values = group.colors) +
+        ggtitle("Contigs mapping") +
+        scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
+        ylab("Scaffold (bp)")  +
+        theme(legend.position = "none")
+      
+      ggsave("scaffold_unprocessed_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
+      
+      
+      
+      #########################################################################
+      #########################################################################
+      
+      #########################################################################
+      #########################################################################
+      
+      sample_cns <- structure(list(
+        gene = scaff$subject_name, 
+        chromosome = scaff$query_name, 
+        start = c(scaff$genomic_start), end = c(scaff$genomic_end), 
+        cn = c(rep(1L,nrow(scaff))), CNA = c(rep("gain",nrow(scaff))),
+        size = c(rep(max(scaff$scaff_stop), nrow(scaff) ))
+      ),
+      
+      .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size"),
+      row.names = c(NA,nrow(scaff)), class = "data.frame" )
+      
+      
       ##############################################################################
       
       
@@ -183,7 +249,7 @@ for(d in directories){
       n <- c(1)
       edited_sample_cns <- sample_cns[-(1:nrow(sample_cns)),]
       
-      
+      ##############################################################################
       
       for(i in unique(sample_cns$gene)){
         
@@ -305,7 +371,8 @@ for(d in directories){
           panel.background = element_blank(),
           axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
         # give the appearance of a discrete axis with chrom labels
-        scale_x_discrete(name = "Contigs", limits = names(chrom_key)) +
+        scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+                         ) +
         # add bands for CNA value
         geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
                                          xmax = as.numeric(gene) + 0.2, 
@@ -319,7 +386,7 @@ for(d in directories){
         #geom_text_repel(data = subset(sample_cns, sample_cns$CNA == "loss"), 
         #                aes(x = gene, y = start, label = gene ), 
         #                color = "blue", show.legend = FALSE) +
-        ggtitle("Contigs mapping on scaffold") +
+        ggtitle("Contigs mapping") +
         # supress scientific notation on the y-axis
         # scale_y_continuous(labels = comma) +
         scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
@@ -329,7 +396,7 @@ for(d in directories){
       #scale_x_continuous(name=paste("Scaffold",s), limits = c(0, max(chrom_sizes$size)*1.05))
       
       
-      ggsave("scaffold_all_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
+      ggsave("scaffold_processed_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
       
       
       #####################################
@@ -394,18 +461,19 @@ for(d in directories){
           panel.grid.minor = element_blank(), 
           panel.background = element_blank(),
           axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
-        scale_x_discrete(name = "Contigs", limits = names(chrom_key)) +
+        scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+                         ) +
         geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
                                          xmax = as.numeric(gene) + 0.2, 
                                          ymax = end, ymin = start, fill = CNA)) + 
         scale_fill_manual(values = group.colors) +
-        ggtitle("Contigs mapping on scaffold") +
+        ggtitle("Contigs mapping") +
         scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
         ylab("Scaffold (bp)")  +
         theme(legend.position = "none")
       
       
-      ggsave("scaffold_all_contigs_red_blue.jpeg", plot=last_plot(), limitsize = FALSE)
+      ggsave("scaffold_processed_red_blue_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
       
       ###############################################################################
       ###############################################################################
@@ -413,6 +481,30 @@ for(d in directories){
       
       sample_cns <- sample_cns %>% filter(CNA == "gain")
       
+      coverage_lengths <- c()
+      i <- 1
+      while(i < nrow(sample_cns)){
+        if(sample_cns$start[i+1] <= sample_cns$end[i]){
+          for(j in seq(i+1, nrow(sample_cns),1)){
+            if(j == nrow(sample_cns)){
+              local_length <- sample_cns$end[j] - sample_cns$start[i]
+              coverage_lengths <- append(coverage_lengths, local_length)
+              i <- j+1
+              break }
+            else{
+              if(sample_cns$start[j+1] <= sample_cns$end[j]){ next }
+              else{
+                local_length <- sample_cns$end[j] - sample_cns$start[i]
+                coverage_lengths <- append(coverage_lengths, local_length)
+                i <- j+1
+                break }
+            } } }
+        else{
+          local_length <- sample_cns$end[i] - sample_cns$start[i]
+          coverage_lengths <- append(coverage_lengths, local_length)
+          i <- i + 1
+        } }
+      coverage <- sum(coverage_lengths) / sample_cns$size[1]
       
       chrom_sizes <- structure(list(
         chromosome = unique(sample_cns$gene), 
@@ -444,7 +536,7 @@ for(d in directories){
                                          xmax = as.numeric(gene) + 0.2, 
                                          ymax = end, ymin = start, fill = CNA)) + 
         scale_fill_manual(values = group.colors) +
-        ggtitle("Contigs mapping on scaffold") +
+        ggtitle(paste("Contigs mapping with coverage =",round(coverage,5))) +
         scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
         ylab("Scaffold (bp)")  +
         theme(legend.position = "none")
@@ -466,9 +558,20 @@ for(d in directories){
       
       
       # output table of all contigs of interest
+      sample_cns_unfiltered <- sample_cns_unfiltered[,-7]
+      sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+        mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
+      sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+        mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
       write.table(sample_cns_unfiltered, 
-                  file=paste(dir,"scaffold",s,"all_contigs.csv",sep="_"),
+                  file=paste(dir,"scaffold",s,"processed_red_blue_contigs.csv",sep="_"),
                   sep=",",row.names = F, col.names = T)
+      
+      sample_cns <- sample_cns[,-7]
+      sample_cns <- sample_cns %>% 
+        mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
+      sample_cns <- sample_cns %>% 
+        mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
       write.table(sample_cns, 
                   file=paste(dir,"scaffold",s,"minimal_contigs.csv",sep="_"),
                   sep=",",row.names = F, col.names = T)
@@ -659,6 +762,70 @@ for(d in directories){
     ##############################################################################
     
     
+    #########################################################################
+    #########################################################################
+    #########################################################################
+    #########################################################################
+    
+    # Unprocessed contigs 
+    
+    chrom_sizes <- structure(list(
+      chromosome = unique(sample_cns$gene), 
+      size = rep(c(max(sample_cns$size)),length(unique(sample_cns$gene)))),
+      .Names = c("chromosome", "size"),
+      class = "data.frame", row.names= c(NA,length(unique(sample_cns$gene))))
+    chrom_order <- c(unique(chrom_sizes$chromosome))
+    chrom_key <- setNames(object = as.character(c(seq(1,length(unique(sample_cns$gene)),1))),
+                          nm = chrom_order)
+    chrom_order <- factor(x = chrom_order, levels = rev(chrom_order))
+    chrom_sizes[["chromosome"]] <- factor(x = chrom_sizes[["chromosome"]], 
+                                          levels = chrom_order)
+    sample_cns[["gene"]] <- factor(x = sample_cns[["gene"]], 
+                                   levels = chrom_order)
+    group.colors <- c(gain = "red", loss = "blue")
+    
+    ggplot(data = chrom_sizes) + 
+      geom_rect(aes(xmin = as.numeric(chromosome) - 0.2, 
+                    xmax = as.numeric(chromosome) + 0.2, 
+                    ymax = size, ymin = 0), 
+                colour="white", fill = "white") + 
+      coord_flip() +
+      theme( 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+      scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+      ) +
+      geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
+                                       xmax = as.numeric(gene) + 0.2, 
+                                       ymax = end, ymin = start, fill = CNA)) + 
+      scale_fill_manual(values = group.colors) +
+      ggtitle("Contigs mapping") +
+      scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
+      ylab("Scaffold (bp)")  +
+      theme(legend.position = "none")
+    
+    ggsave("scaffold_unprocessed_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
+    
+    
+    
+    #########################################################################
+    #########################################################################
+    
+    sample_cns <- structure(list(
+      gene = scaff$subject_name, 
+      chromosome = scaff$query_name, 
+      start = c(scaff$genomic_start), end = c(scaff$genomic_end), 
+      cn = c(rep(1L,nrow(scaff))), CNA = c(rep("gain",nrow(scaff))),
+      size = c(rep(max(scaff$scaff_stop), nrow(scaff) ))
+    ),
+    
+    .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size"),
+    row.names = c(NA,nrow(scaff)), class = "data.frame" )
+    
+    ##############################################################################
+    
     sample_cns <- sample_cns %>% add_column(query_code = rep(NA,nrow(sample_cns)), .after = "chromosome")
     sample_cns$query_code <- sample_cns$chromosome
     sample_cns <- sample_cns %>% add_column(query_coordinates = rep(NA,nrow(sample_cns)), .after = "query_code")
@@ -672,7 +839,8 @@ for(d in directories){
     n <- c(1)
     edited_sample_cns <- sample_cns[-(1:nrow(sample_cns)),]
     
-    
+    #########################################################################
+    ########################################################################
     
     for(i in unique(sample_cns$gene)){
       
@@ -794,7 +962,8 @@ for(d in directories){
         panel.background = element_blank(),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
       # give the appearance of a discrete axis with chrom labels
-      scale_x_discrete(name = "Contigs", limits = names(chrom_key)) +
+      scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+                       ) +
       # add bands for CNA value
       geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
                                        xmax = as.numeric(gene) + 0.2, 
@@ -808,7 +977,7 @@ for(d in directories){
       #geom_text_repel(data = subset(sample_cns, sample_cns$CNA == "loss"), 
       #                aes(x = gene, y = start, label = gene ), 
       #                color = "blue", show.legend = FALSE) +
-      ggtitle("Contigs mapping on scaffold") +
+      ggtitle("Contigs mapping") +
       # supress scientific notation on the y-axis
       # scale_y_continuous(labels = comma) +
       scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
@@ -818,7 +987,7 @@ for(d in directories){
     #scale_x_continuous(name=paste("Scaffold",s), limits = c(0, max(chrom_sizes$size)*1.05))
     
     
-    ggsave("scaffold_all_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
+    ggsave("scaffold_processed_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
     
     
     #####################################
@@ -883,18 +1052,19 @@ for(d in directories){
         panel.grid.minor = element_blank(), 
         panel.background = element_blank(),
         axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
-      scale_x_discrete(name = "Contigs", limits = names(chrom_key)) +
+      scale_x_discrete(name = "Contigs", #limits = names(chrom_key)
+                       ) +
       geom_rect(data = sample_cns, aes(xmin = as.numeric(gene) - 0.2, 
                                        xmax = as.numeric(gene) + 0.2, 
                                        ymax = end, ymin = start, fill = CNA)) + 
       scale_fill_manual(values = group.colors) +
-      ggtitle("Contigs mapping on scaffold") +
+      ggtitle("Contigs mapping") +
       scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
       ylab("Scaffold (bp)")  +
       theme(legend.position = "none")
     
     
-    ggsave("scaffold_all_contigs_red_blue.jpeg", plot=last_plot(), limitsize = FALSE)
+    ggsave("scaffold_processed_red_blue_contigs.jpeg", plot=last_plot(), limitsize = FALSE)
     
     ###############################################################################
     ###############################################################################
@@ -902,6 +1072,30 @@ for(d in directories){
     
     sample_cns <- sample_cns %>% filter(CNA == "gain")
     
+    coverage_lengths <- c()
+    i <- 1
+    while(i < nrow(sample_cns)){
+      if(sample_cns$start[i+1] <= sample_cns$end[i]){
+        for(j in seq(i+1, nrow(sample_cns),1)){
+          if(j == nrow(sample_cns)){
+            local_length <- sample_cns$end[j] - sample_cns$start[i]
+            coverage_lengths <- append(coverage_lengths, local_length)
+            i <- j+1
+            break }
+          else{
+            if(sample_cns$start[j+1] <= sample_cns$end[j]){ next }
+            else{
+              local_length <- sample_cns$end[j] - sample_cns$start[i]
+              coverage_lengths <- append(coverage_lengths, local_length)
+              i <- j+1
+              break }
+          } } }
+      else{
+        local_length <- sample_cns$end[i] - sample_cns$start[i]
+        coverage_lengths <- append(coverage_lengths, local_length)
+        i <- i + 1
+      } }
+    coverage <- sum(coverage_lengths) / sample_cns$size[1]
     
     chrom_sizes <- structure(list(
       chromosome = unique(sample_cns$gene), 
@@ -933,10 +1127,10 @@ for(d in directories){
                                        xmax = as.numeric(gene) + 0.2, 
                                        ymax = end, ymin = start, fill = CNA)) + 
       scale_fill_manual(values = group.colors) +
-      ggtitle("Contigs mapping on scaffold") +
+      ggtitle(paste("Contigs mapping with coverage =",round(coverage,5))) +
       scale_y_continuous(breaks =  round(seq(0, max(sample_cns$size), by = max(sample_cns$size)/50),1)) +
       ylab("Scaffold (bp)")  +
-      theme(legend.position = "none")
+      theme(legend.position = "none") 
     
     
     ggsave("minimal_scaffold.jpeg", plot=last_plot(), limitsize = FALSE)
@@ -953,12 +1147,24 @@ for(d in directories){
     
     
     # output table of all contigs of interest
+    sample_cns_unfiltered <- sample_cns_unfiltered[,-7]
+    sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+      mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
+    sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+      mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
     write.table(sample_cns_unfiltered, 
-                file=paste(dir,"chromosome","all_contigs.csv",sep="_"),
+                file=paste(dir,"chromosome","processed_red_blue_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
+    
+    sample_cns <- sample_cns[,-7]
+    sample_cns <- sample_cns %>% 
+      mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
+    sample_cns <- sample_cns %>% 
+      mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
     write.table(sample_cns, 
                 file=paste(dir,"chromosome","minimal_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
+    
     
     
     # table included
