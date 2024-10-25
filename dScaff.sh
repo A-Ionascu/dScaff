@@ -179,15 +179,17 @@ makeblastdb -in *.fasta -dbtype nucl
 cd $CWD/$subdir/
 
 echo "Performing BLAST for selected queries ..."
-echo " "
+#echo " "
 ls -d ./*/ | while read line
 do 
 
 #[[ ! -d "line" ]] && continue
  
 cd $line
-
+echo " "
+echo " "
 echo "Entered " $line
+
 
 awk -F "," 'NR > 1 {print $2":"$3"-"$4}' *_filtered.csv > query_headers.txt
 sed -i 's/"//g' query_headers.txt
@@ -254,15 +256,15 @@ done
 echo " "
 echo " "
 echo "Indexing and mapping contigs ..."
-echo " "
-ls -d ./*/ | while read line
+
+ls -d ./*/ | while read line 
 do 
 
 #[[ ! -d "line" ]] && continue
 
 cd $CWD/$subdir/$line
 
-echo "Entered " $line
+#echo "Entered " $line
 
 mv *_distances_filtered.csv query_filtered.csv
 
@@ -279,7 +281,7 @@ cd $subdir
 
 Rscript contigs_mapping.R 2> /dev/null &
 spinner $!
-echo "Done!"
+#echo "Done!"
 rm parameters_dScaff.txt
 
 ############################
@@ -288,7 +290,7 @@ grep ">" $assembly > headers_assembly.txt
 ############################
 cd $subdir
 
-ls -d ./*/ | while read line
+ls -d ./*/ | while read line 
 do
 cd $line
 
@@ -298,93 +300,108 @@ mv *.txt tmp
 mv *.fasta tmp
 
 #######################################
-if [ -d "chromosome" ]; then
-cd chromosome/
+	if [ -d "chromosome" ]; then
+	cd chromosome/
 ##################################################################################################################
-sed -i 's/"//g' *selected_contigs.csv 
-sed -i 's/,/ /g' *selected_contigs.csv
+	sed -i 's/"//g' *selected_contigs.csv 
+	sed -i 's/,/ /g' *selected_contigs.csv
 #Pentru fiecare fisier care se termina cu selected_contigs.csv, il parcurg cu while, apoi extrag headerele de interes in baza fisierului cu all headers.
-for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
+	for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
 
 #Adaug o coloana care contine cromozomul si scaffoldul.
-for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
+	for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
 
 #Elimin ">".
-sed -i 's/>//g' *selected.headers.txt
+	sed -i 's/>//g' *selected.headers.txt
 
 #Extrag contigurile, dar nu sunt in ordine.
-for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
+	for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
 
 #Sparg fisierul fasta ce contine contiguri.
-awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
+	awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
 
 #Am ordonat contigurile
-cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
-rm -r *.fna
-rm -r *.new1.assembly.fasta
+	cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
+	rm -r *.fna
+	rm -r *.new1.assembly.fasta
 
-for chr in *.dScaff.assembly1.fasta
-do
-awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
-sed -i "s/>/>${chr%.dScaff.assembly1.fasta} /g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
-done
-rm -r contigs_chr_loc.txt
-rm -r *.dScaff.assembly1.fasta
+	for chr in *.dScaff.assembly1.fasta
+	do
+	awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+	sed -i "s/>/>${chr%.dScaff.assembly1.fasta}"_"/g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+	done
+	rm -r contigs_chr_loc.txt
+	rm -r *.dScaff.assembly1.fasta
+	rm -r *.selected.headers.txt
+	sed -i 's/_chromosome//g' *_dScaff_assembly.fasta
 ##################################################################################################################
 
-fi
+	fi
 #######################################
 #######################################
-if [ -d "scaffolds" ]; then
-cd scaffolds
-ls -d ./*/ | while read scaff
-do
-cd $scaff
+		if [ -d "scaffolds" ]; then
+		cd scaffolds 2> /dev/null
+		ls -d ./*/ | while read scaff
+		do
+		cd $scaff 
 
 ##################################################################################################################
-sed -i 's/"//g' *selected_contigs.csv 
-sed -i 's/,/ /g' *selected_contigs.csv
+		sed -i 's/"//g' *selected_contigs.csv 
+		sed -i 's/,/ /g' *selected_contigs.csv
 #Pentru fiecare fisier care se termina cu selected_contigs.csv, il parcurg cu while, apoi extrag headerele de interes in baza fisierului cu all headers.
-for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
+		for i in *selected_contigs.csv; do cat $i | while read contig index; do grep $contig $CWD/headers_assembly.txt >> ${i%_selected_contigs.csv}".selected.headers.txt"; done; done
 
 #Adaug o coloana care contine cromozomul si scaffoldul.
-for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
+		for i in *selected_contigs.csv; do awk -v loc="${i%_selected_contigs.csv}" '{print $0, loc}' $i >> contigs_chr_loc.txt; done
 
 #Elimin ">".
-sed -i 's/>//g' *selected.headers.txt
+		sed -i 's/>//g' *selected.headers.txt
 
 #Extrag contigurile, dar nu sunt in ordine.
-for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
+		for i in *.selected.headers.txt; do seqtk subseq $CWD/$assembly $i > ${i%.selected.headers.txt}".new1.assembly.fasta"; done
 
 #Sparg fisierul fasta ce contine contiguri.
-awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
+		awk -F ">| " '/^>/ {s=$2".fna"}; {print > s}' *.new1.assembly.fasta
 
 #Am ordonat contigurile
-cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
-rm -r *.fna
-rm -r *.new1.assembly.fasta
+		cat contigs_chr_loc.txt | while read contig loc chr; do for i in *.fna; do if [[ ${i%.fna} == $contig ]]; then cat $i >> $chr".dScaff.assembly1.fasta"; fi; done; done
+		rm -r *.fna
+		rm -r *.new1.assembly.fasta
 
-for chr in *.dScaff.assembly1.fasta
-do
-awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
-sed -i "s/>/>${chr%.dScaff.assembly1.fasta} /g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
-done
-rm -r contigs_chr_loc.txt
-rm -r *.dScaff.assembly1.fasta
+		for chr in *.dScaff.assembly1.fasta
+		do
+		awk '/^>/{gsub(/^>/,">"i++" ");}1' i=1 $chr > ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+		sed -i "s/>/>${chr%.dScaff.assembly1.fasta}"_"/g" ${chr%.dScaff.assembly1.fasta}"_dScaff_assembly.fasta"
+		done
+		rm -r contigs_chr_loc.txt
+		rm -r *.dScaff.assembly1.fasta
+		rm -r *.selected.headers.txt
+		sed -i 's/_scaffold//g' *_dScaff_assembly.fasta
+
 ##################################################################################################################
-cd -
-done
-fi
+		cp *.fasta ../
+		cd - 
+		done
+		line_name=$( echo $line | cut -c3- )
+		sudo cat *.fasta > ${line_name%/}"_dScaff_assembly.fa"
+		rm *.fasta
+		sudo cat *.fa > ${line_name%/}"_dScaff_assembly.fasta"
+		rm *.fa
+		fi
 #######################################
+#cd $CWD/$subdir/$line/scaffolds
+#find . -type f -name *_dScaff_assembly.fasta -exec cat > $line"_dScaff.fasta" {} +
+
 cd $CWD/$subdir
 
-
+find . -type f -name *_dScaff_assembly.fasta -exec cat > dScaff.fasta {} +
 
 done
 
 rm query_filtering.R
 rm contigs_mapping.R
 rm chromosomes.txt
+rm *.tsv
 
 cd $CWD
 #mv assembly_database $subdir
@@ -403,7 +420,7 @@ seconds=$(( $END - $START ))
 minutes=$(echo "scale=1; $seconds / 60" | bc)
 hours=$(echo "scale=1; $seconds / 3600" | bc)
 
-if [[ $seconds -ge 360 ]] 
+if [[ $seconds -ge 3600 ]] 
 then
 echo "dScaff ran for $hours hours (that's $minutes minutes or $seconds seconds)."
 elif [[ $seconds -ge 60 ]]
