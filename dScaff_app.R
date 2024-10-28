@@ -57,7 +57,7 @@ if(interactive()){
                                   title="Plots", 
                                   value="plots",
                                   br(),
-                                  h4("Minimal scaffold plot"),
+                                  h4("Minimal scaffold"),
                                   br(),
                                   downloadButton("download_minimal_contigs_plot", "Export minimal scaffold plot"),
                                   br(),br(),
@@ -65,20 +65,21 @@ if(interactive()){
                                   
                                   
                                   br(),br(),br(),
-                                  h4("All contigs plot (red/blue)"),
+                                  h4("All contigs (red/blue)"),
                                   br(),
                                   downloadButton("download_red_blue_contigs_plot", "Export processed contigs plot (red/blue)"),
                                   withLoader(plotOutput("red_blue_contigs_plot", height = 700), type="html", loader="dnaspin"),
                                   
                                   
                                   br(),br(),br(),
-                                  h4("Processed contigs plot"),
+                                  h4("Processed contigs"),
+                                  br(),
                                   downloadButton("download_all_contigs_plot", "Export processed contigs plot"),
                                   withLoader(plotOutput("all_contigs_plot", height = 700), type="html", loader="dnaspin"),
                                   
                                   
                                   br(),br(),br(),
-                                  h4("Unrocessed contigs plot"),
+                                  h4("Unrocessed contigs"),
                                   br(),
                                   downloadButton("download_unprocessed_contigs_plot", "Export unprocessed contigs plot"),
                                   withLoader(plotOutput("unprocessed_contigs_plot", height = 700), type="html", loader="dnaspin"),
@@ -86,14 +87,14 @@ if(interactive()){
                                   
                                   br(),br(),br(),br()),
                                 
-                                tabPanel(title="Minimal contigs table", value="minimal_contigs",
+                                tabPanel(title="Minimal contigs", value="minimal_contigs",
                                          br(),
                                          h4("Minimal contigs table"),
                                          br(),
                                          downloadButton("download_minimal_contigs_table", "Export minimal contigs table"),
                                          withLoader(DT::dataTableOutput('minimal_contigs_table'), type="html", loader="dnaspin"),
                                          br(),br(),br(),br()),
-                                tabPanel(title="All contigs table", value="all_contigs",
+                                tabPanel(title="All contigs", value="all_contigs",
                                          br(),
                                          h4("All contigs table"),
                                          br(),
@@ -102,12 +103,12 @@ if(interactive()){
                                          br(),br(),br(),br()),
                                 tabPanel(title="Included contigs table", value="included_contigs",
                                          br(),
-                                         h4("Included contigs table"),
+                                         h4("Included contigs"),
                                          br(),
                                          downloadButton("download_included_contigs_table", "Export included contigs table"),
                                          withLoader(DT::dataTableOutput('included_contigs_table'), type="html", loader="dnaspin"),
                                          br(),br(),br(),br()),
-                                tabPanel(title="Unprocessed contigs table", value="unprocessed_contigs",
+                                tabPanel(title="Unprocessed contigs", value="unprocessed_contigs",
                                          br(),
                                          h4("Unprocessed contigs table"),
                                          br(),
@@ -249,6 +250,10 @@ if(interactive()){
       sample_cns$query_code <- gsub("\\:.*","",sample_cns$query_code)
       sample_cns$query_coordinates <- gsub(".*:","",sample_cns$query_coordinates)
       sample_cns <- sample_cns %>% add_column(fragments = rep(NA,nrow(sample_cns)), .after = "size")
+      sample_cns <- sample_cns %>% add_column(ctg_size = rep(NA,nrow(sample_cns)), .after = "end")
+      for(csize in seq(1,nrow(sample_cns),1)){
+        sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1
+      }
       
       sample_cns
     })
@@ -312,10 +317,10 @@ if(interactive()){
     unprocessed_hits_reactive_edited <- reactive({
       sample_cns <- unprocessed_hits_reactive()
       sample_cns <- data.frame(sample_cns)
-      sample_cns <- sample_cns[,-10]
+      sample_cns <- sample_cns[,-11]
+      sample_cns <- sample_cns[,-9]
       sample_cns <- sample_cns[,-8]
-      sample_cns <- sample_cns[,-7]
-      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Subject size")
+      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Query size","Subject size")
       
       sample_cns
     })
@@ -364,6 +369,7 @@ if(interactive()){
       sample_cns$query_code <- gsub("\\:.*","",sample_cns$query_code)
       sample_cns$query_coordinates <- gsub(".*:","",sample_cns$query_coordinates)
       sample_cns <- sample_cns %>% add_column(fragments = rep(NA,nrow(sample_cns)), .after = "size")
+      
       
       n <- c(1)
       edited_sample_cns <- sample_cns[-(1:nrow(sample_cns)),]
@@ -586,10 +592,15 @@ if(interactive()){
     red_blue_contigs_reactive_edited <- reactive({
       sample_cns <- red_blue_contigs_reactive()
       sample_cns <- data.frame(sample_cns)
-      sample_cns <- sample_cns[,-10]
+      sample_cns <- sample_cns %>% add_column(ctg_size = rep(NA,nrow(sample_cns)), .after = "end")
+      for(csize in seq(1,nrow(sample_cns),1)){
+        sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1 }
+      
+      #sample_cns <- sample_cns[,-10]
       #sample_cns <- sample_cns[,-8]
-      sample_cns <- sample_cns[,-7]
-      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Filter","Subject size")
+      sample_cns <- sample_cns[,-8]
+      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Query size",
+                                "Filter","Subject size","Hit fragments")
     
       sample_cns <- sample_cns %>% 
         mutate(Filter = ifelse(as.character(Filter) == "gain", "red", as.character(Filter)))
@@ -712,10 +723,14 @@ if(interactive()){
     minimal_contigs_reactive_edited <- reactive({
       sample_cns <- minimal_contigs_reactive()
       sample_cns <- data.frame(sample_cns)
-      sample_cns <- sample_cns[,-10]
+      sample_cns <- sample_cns %>% add_column(ctg_size = rep(NA,nrow(sample_cns)), .after = "end")
+      for(csize in seq(1,nrow(sample_cns),1)){
+        sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1 }
+      #sample_cns <- sample_cns[,-10]
+      sample_cns <- sample_cns[,-9]
       sample_cns <- sample_cns[,-8]
-      sample_cns <- sample_cns[,-7]
-      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Subject size")
+      colnames(sample_cns) <- c("Contig","Query","Query code","Query coordinates","Query start","Query end","Query size",
+                                "Subject size","Hit fragments")
       
       sample_cns
     })
