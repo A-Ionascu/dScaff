@@ -125,7 +125,7 @@ for(d in directories){
   contigs_of_interest <- arrange(contigs_of_interest, genomic_start)
 
 
-  write.csv(contigs_of_interest, "contigs_of_interest_all_scaffolds.csv")
+  write.csv(contigs_of_interest, "contigs_of_interest.csv")
 
 ################
 
@@ -149,6 +149,43 @@ for(d in directories){
         filter(ref_scaff == s)
       
       scaff <- scaff_int
+      
+      
+      
+      #########################################################################
+      ### Mapping contigs
+      map <- data.frame(matrix(NA,
+                               nrow = length(unique(scaff_int$subject_name)),
+                               ncol = length(unique(scaff_int$query_name))))
+      
+      colnames(map) <- unique(scaff_int$query_name)
+      rownames(map) <- unique(scaff_int$subject_name)
+      
+      
+      for(i in seq(1,ncol(map),1)){
+        
+        gene <- scaff_int %>%
+          filter(scaff_int$query_name == colnames(map)[i])
+        
+        contiguri <- unique(gene$subject_name)
+        
+        for(j in contiguri){
+          
+          rand <- which(rownames(map) == j)
+          map[rand,i] <- c("______")
+        }
+        
+      }
+      
+      write.csv(map, paste(s,"mapped_contigs.csv"), na="")
+      #########################################################################
+      
+      
+      
+      
+      
+      
+      
       
       #########################################################################
       #########################################################################
@@ -563,6 +600,12 @@ for(d in directories){
         mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
       sample_cns_unfiltered <- sample_cns_unfiltered %>% 
         mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
+      sample_cns_unfiltered <- sample_cns_unfiltered %>% add_column(ctg_size = rep(NA,nrow(sample_cns_unfiltered)), .after = "end")
+      for(csize in seq(1,nrow(sample_cns_unfiltered),1)){
+        sample_cns_unfiltered$ctg_size[csize] <- (sample_cns_unfiltered$end[csize] - sample_cns_unfiltered$start[csize]) + 1
+      }
+      colnames(sample_cns_unfiltered) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
+                                           "Query_size","Filter","Subject_size","Hit_fragments")
       write.table(sample_cns_unfiltered, 
                   file=paste(dir,"scaffold",s,"processed_red_blue_contigs.csv",sep="_"),
                   sep=",",row.names = F, col.names = T)
@@ -572,6 +615,12 @@ for(d in directories){
         mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
       sample_cns <- sample_cns %>% 
         mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
+      sample_cns <- sample_cns %>% add_column(ctg_size = rep(NA,nrow(sample_cns)), .after = "end")
+      for(csize in seq(1,nrow(sample_cns),1)){
+        sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1
+      }
+      colnames(sample_cns) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
+                                           "Query_size","Filter","Subject_size","Hit_fragments")
       write.table(sample_cns, 
                   file=paste(dir,"scaffold",s,"minimal_contigs.csv",sep="_"),
                   sep=",",row.names = F, col.names = T)
@@ -609,66 +658,41 @@ for(d in directories){
       #########################################################################
       
       
-      ###
-      map <- data.frame(matrix(NA,
-                               nrow = length(unique(scaff_int$subject_name)),
-                               ncol = length(unique(scaff_int$query_name))))
-      
-      colnames(map) <- unique(scaff_int$query_name)
-      rownames(map) <- unique(scaff_int$subject_name)
-      
-      
-      for(i in seq(1,ncol(map),1)){
-        
-        gene <- scaff_int %>%
-          filter(scaff_int$query_name == colnames(map)[i])
-        
-        contiguri <- unique(gene$subject_name)
-        
-        for(j in contiguri){
-          
-          rand <- which(rownames(map) == j)
-          map[rand,i] <- c("______")
-        }
-        
-      }
-      
-      write.csv(map, paste(s,"mapped_contigs.csv"), na="")
-      ###
+      #
       
       #############
       
-      contig_intex <- data.frame(matrix(NA, nrow=nrow(map), ncol=7))  
-      colnames(contig_intex) <- c("contigs","genes_hit",
-                                  "contig_start","contig_end",
-                                  "genomic_start","genomic_end","scaffold")
-      contig_intex$contigs <- rownames(map)
+#      contig_intex <- data.frame(matrix(NA, nrow=nrow(map), ncol=7))  
+#      colnames(contig_intex) <- c("contigs","genes_hit",
+#                                  "contig_start","contig_end",
+#                                  "genomic_start","genomic_end","scaffold")
+#      contig_intex$contigs <- rownames(map)
       
-      for(i in seq(1,nrow(map),1)){
+#      for(i in seq(1,nrow(map),1)){
         
-        hits <- which(!is.na(map[i,]))
-        contig_intex$genes_hit[i] <- length(hits)
-        contig_intex$scaffold[i] <- colnames(map)[i]
+#        hits <- which(!is.na(map[i,]))
+#        contig_intex$genes_hit[i] <- length(hits)
+#        contig_intex$scaffold[i] <- colnames(map)[i]
         
-        tmp_contig <- contigs_of_interest %>%
-          filter(subject_name == rownames(map)[i])
+#        tmp_contig <- contigs_of_interest %>%
+#          filter(subject_name == rownames(map)[i])
         
-        if(min(tmp_contig$subject_start) < min(tmp_contig$subject_end)){
-          contig_intex$contig_start[i] <- min(tmp_contig$subject_start)
-          contig_intex$contig_end[i] <- max(tmp_contig$subject_end) }
-        else{
-          contig_intex$contig_start[i] <- max(tmp_contig$subject_start)
-          contig_intex$contig_end[i] <- min(tmp_contig$subject_end) }
+#        if(min(tmp_contig$subject_start) < min(tmp_contig$subject_end)){
+#          contig_intex$contig_start[i] <- min(tmp_contig$subject_start)
+#          contig_intex$contig_end[i] <- max(tmp_contig$subject_end) }
+#        else{
+#          contig_intex$contig_start[i] <- max(tmp_contig$subject_start)
+#          contig_intex$contig_end[i] <- min(tmp_contig$subject_end) }
         
-        if(min(tmp_contig$genomic_start) < min(tmp_contig$genomic_end)){
-          contig_intex$genomic_start[i] <- min(tmp_contig$genomic_start)
-          contig_intex$genomic_end[i] <- max(tmp_contig$genomic_end) }
-        else{
-          contig_intex$genomic_start[i] <- max(tmp_contig$genomic_start)
-          contig_intex$genomic_end[i] <- min(tmp_contig$genomic_end) }
-      }
+#        if(min(tmp_contig$genomic_start) < min(tmp_contig$genomic_end)){
+#          contig_intex$genomic_start[i] <- min(tmp_contig$genomic_start)
+#          contig_intex$genomic_end[i] <- max(tmp_contig$genomic_end) }
+#        else{
+#          contig_intex$genomic_start[i] <- max(tmp_contig$genomic_start)
+#          contig_intex$genomic_end[i] <- min(tmp_contig$genomic_end) }
+#      }
       
-      write.csv(contig_intex, paste(s,"indexed_contigs.csv"))
+#      write.csv(contig_intex, paste(s,"indexed_contigs.csv"))
       
     }
 
@@ -745,7 +769,37 @@ for(d in directories){
     
     scaff <- contigs_of_interest
     
-    ##############################################################################
+    
+    
+    
+    ###########################################################################
+    map <- data.frame(matrix(NA,
+                             nrow = length(unique(contigs_of_interest$subject_name)),
+                             ncol = length(unique(contigs_of_interest$query_name))))
+    
+    colnames(map) <- unique(contigs_of_interest$query_name)
+    rownames(map) <- unique(contigs_of_interest$subject_name)
+    
+    
+    for(i in seq(1,ncol(map),1)){
+      
+      gene <- contigs_of_interest %>%
+        filter(contigs_of_interest$query_name == colnames(map)[i])
+      
+      contiguri <- unique(gene$subject_name)
+      
+      for(j in contiguri){
+        
+        rand <- which(rownames(map) == j)
+        map[rand,i] <- c("______")
+      }
+      
+    }
+    
+    write.csv(map, "mapped_contigs.csv", na="")
+    
+    ###########################################################################
+    ##########################################################################
     
     sample_cns <- structure(list(
       gene = scaff$subject_name, 
@@ -1152,6 +1206,12 @@ for(d in directories){
       mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
     sample_cns_unfiltered <- sample_cns_unfiltered %>% 
       mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
+    sample_cns_unfiltered <- sample_cns_unfiltered %>% add_column(ctg_size = rep(NA,nrow(sample_cns_unfiltered)), .after = "end")
+    for(csize in seq(1,nrow(sample_cns_unfiltered),1)){
+      sample_cns_unfiltered$ctg_size[csize] <- (sample_cns_unfiltered$end[csize] - sample_cns_unfiltered$start[csize]) + 1
+    }
+    colnames(sample_cns_unfiltered) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
+                                         "Query_size","Filter","Subject_size","Hit_fragments")
     write.table(sample_cns_unfiltered, 
                 file=paste(dir,"chromosome","processed_red_blue_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
@@ -1161,6 +1221,12 @@ for(d in directories){
       mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
     sample_cns <- sample_cns %>% 
       mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
+    sample_cns <- sample_cns %>% add_column(ctg_size = rep(NA,nrow(sample_cns)), .after = "end")
+    for(csize in seq(1,nrow(sample_cns),1)){
+      sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1
+    }
+    colnames(sample_cns) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
+                              "Query_size","Filter","Subject_size","Hit_fragments")
     write.table(sample_cns, 
                 file=paste(dir,"chromosome","minimal_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
@@ -1194,64 +1260,41 @@ for(d in directories){
     ###########################################################################
     ###########################################################################
     
-    map <- data.frame(matrix(NA,
-                             nrow = length(unique(contigs_of_interest$subject_name)),
-                             ncol = length(unique(contigs_of_interest$query_name))))
     
-    colnames(map) <- unique(contigs_of_interest$query_name)
-    rownames(map) <- unique(contigs_of_interest$subject_name)
-    
-    
-    for(i in seq(1,ncol(map),1)){
-      
-      gene <- contigs_of_interest %>%
-        filter(contigs_of_interest$query_name == colnames(map)[i])
-      
-      contiguri <- unique(gene$subject_name)
-      
-      for(j in contiguri){
-        
-        rand <- which(rownames(map) == j)
-        map[rand,i] <- c("______")
-      }
-      
-    }
-    
-    write.csv(map, "mapped_contigs.csv", na="")
     
     
     #############
     
-    contig_intex <- data.frame(matrix(NA, nrow=nrow(map), ncol=6))  
-    colnames(contig_intex) <- c("contigs","genes_hit",
-                                "contig_start","contig_end",
-                                "genomic_start","genomic_end")
-    contig_intex$contigs <- rownames(map)
+#    contig_intex <- data.frame(matrix(NA, nrow=nrow(map), ncol=6))  
+#    colnames(contig_intex) <- c("contigs","genes_hit",
+#                                "contig_start","contig_end",
+#                                "genomic_start","genomic_end")
+#    contig_intex$contigs <- rownames(map)
     
-    for(i in seq(1,nrow(map),1)){
+#    for(i in seq(1,nrow(map),1)){
       
-      hits <- which(!is.na(map[i,]))
-      contig_intex$genes_hit[i] <- length(hits)
+#      hits <- which(!is.na(map[i,]))
+#      contig_intex$genes_hit[i] <- length(hits)
       
-      tmp_contig <- contigs_of_interest %>%
-        filter(subject_name == rownames(map)[i])
+#      tmp_contig <- contigs_of_interest %>%
+#        filter(subject_name == rownames(map)[i])
       
-      if(min(tmp_contig$subject_start) < min(tmp_contig$subject_end)){
-        contig_intex$contig_start[i] <- min(tmp_contig$subject_start)
-        contig_intex$contig_end[i] <- max(tmp_contig$subject_end) }
-      else{
-        contig_intex$contig_start[i] <- max(tmp_contig$subject_start)
-        contig_intex$contig_end[i] <- min(tmp_contig$subject_end) }
+#      if(min(tmp_contig$subject_start) < min(tmp_contig$subject_end)){
+#        contig_intex$contig_start[i] <- min(tmp_contig$subject_start)
+#        contig_intex$contig_end[i] <- max(tmp_contig$subject_end) }
+#      else{
+#        contig_intex$contig_start[i] <- max(tmp_contig$subject_start)
+#        contig_intex$contig_end[i] <- min(tmp_contig$subject_end) }
       
-      if(min(tmp_contig$genomic_start) < min(tmp_contig$genomic_end)){
-        contig_intex$genomic_start[i] <- min(tmp_contig$genomic_start)
-        contig_intex$genomic_end[i] <- max(tmp_contig$genomic_end) }
-      else{
-        contig_intex$genomic_start[i] <- max(tmp_contig$genomic_start)
-        contig_intex$genomic_end[i] <- min(tmp_contig$genomic_end) }
-    }
+#      if(min(tmp_contig$genomic_start) < min(tmp_contig$genomic_end)){
+#        contig_intex$genomic_start[i] <- min(tmp_contig$genomic_start)
+#        contig_intex$genomic_end[i] <- max(tmp_contig$genomic_end) }
+#      else{
+#        contig_intex$genomic_start[i] <- max(tmp_contig$genomic_start)
+#        contig_intex$genomic_end[i] <- min(tmp_contig$genomic_end) }
+#    }
     
-    write.csv(contig_intex, "indexed_contigs.csv")
+#    write.csv(contig_intex, "indexed_contigs.csv")
     
     
   }
