@@ -1,8 +1,8 @@
 # List packages to check installation
 packages <- c("ggplot2", "dplyr","tidyr","shiny","shinythemes","DT",
-              "gridExtra","ggthemes","nortest","tseries","reporter","qqconf","qqplotr",
-              "shinycssloaders","shinybusy","shinycustomloader","car", "rstatix",
-              "fontawesome","RColorBrewer","ggtext","coin","exactRankTests","bslib","rlist",
+              "gridExtra","ggthemes","nortest",
+              "shinycssloaders","shinybusy","shinycustomloader",
+              "fontawesome","RColorBrewer","bslib",
               "htmltools",
               
               "readr","utils","tibble","ggrepel","scales"
