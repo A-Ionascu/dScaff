@@ -583,7 +583,33 @@ for(d in directories){
       
       
       
-      ##################################################
+      ########################################################################
+      
+      # table included
+      sample_cns_included_contigs <- sample_cns_unfiltered %>% filter(CNA == "loss")
+      included_contigs_vector <- sample_cns_included_contigs$gene
+      
+      maximum_included <- c()
+      for(i in seq(1,nrow(sample_cns),1)){
+        included_rows_vector <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
+                                          which(sample_cns_included_contigs$end <= sample_cns$end[i]))
+        maximum_included <- append(maximum_included,length(included_rows_vector)) }
+      
+      included_contigs <- data.frame(matrix(NA,nrow=max(maximum_included), ncol=nrow(sample_cns)))
+      colnames(included_contigs) <- as.character(sample_cns$gene)
+      for(i in seq(1,nrow(sample_cns),1)){
+        included_rows <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
+                                   which(sample_cns_included_contigs$end <= sample_cns$end[i]))
+        if(length(included_rows) != 0){
+          included_contigs[1:length(included_rows),i] <- as.character(sample_cns_included_contigs$gene[included_rows])
+        } }
+      write.table(included_contigs, 
+                  file=paste(dir,"scaffold",s,"included_contigs.csv",sep="_"), 
+                  sep=",", row.names = F, na="")
+      
+      
+      ########################################################################
+      
       
       #setwd(file.path(mainDir,dir))
       # output list of red contigs for creating fasta
@@ -626,27 +652,7 @@ for(d in directories){
                   sep=",",row.names = F, col.names = T)
       
       
-      # table included
-      sample_cns_included_contigs <- sample_cns_unfiltered %>% filter(CNA == "loss")
-      included_contigs_vector <- sample_cns_included_contigs$gene
-    
-      maximum_included <- c()
-      for(i in seq(1,nrow(sample_cns),1)){
-        included_rows_vector <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
-                                          which(sample_cns_included_contigs$end <= sample_cns$end[i]))
-        maximum_included <- append(maximum_included,length(included_rows_vector)) }
       
-      included_contigs <- data.frame(matrix(NA,nrow=max(maximum_included), ncol=nrow(sample_cns)))
-      colnames(included_contigs) <- as.character(sample_cns$gene)
-      for(i in seq(1,nrow(sample_cns),1)){
-        included_rows <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
-                                   which(sample_cns_included_contigs$end <= sample_cns$end[i]))
-        if(length(included_rows) != 0){
-          included_contigs[1:length(included_rows),i] <- as.character(sample_cns_included_contigs$gene[included_rows])
-        } }
-      write.table(included_contigs, 
-                  file=paste(dir,"scaffold",s,"included_contigs.csv",sep="_"), 
-                  sep=",", row.names = F, na="")
       
       #
       #setwd(file.path(mainDir,dir,"scaffolds",s))
@@ -1191,6 +1197,34 @@ for(d in directories){
     
     ###########################################################################
     #setwd(file.path(mainDir,dir))
+    
+    
+    ###########################################################################
+    # table included
+    sample_cns_included_contigs <- sample_cns_unfiltered %>% filter(CNA == "loss")
+    included_contigs_vector <- sample_cns_included_contigs$gene
+    
+    maximum_included <- c()
+    for(i in seq(1,nrow(sample_cns),1)){
+      included_rows_vector <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
+                                        which(sample_cns_included_contigs$end <= sample_cns$end[i]))
+      maximum_included <- append(maximum_included,length(included_rows_vector)) }
+    
+    included_contigs <- data.frame(matrix(NA,nrow=max(maximum_included), ncol=nrow(sample_cns)))
+    colnames(included_contigs) <- as.character(sample_cns$gene)
+    for(i in seq(1,nrow(sample_cns),1)){
+      included_rows <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
+                                 which(sample_cns_included_contigs$end <= sample_cns$end[i]))
+      if(length(included_rows) != 0){
+        included_contigs[1:length(included_rows),i] <- as.character(sample_cns_included_contigs$gene[included_rows])
+      } }
+    write.table(included_contigs, 
+                file=paste(dir,"chromosome","included_contigs.csv",sep="_"), 
+                sep=",", row.names = F, na="")
+    
+    ###########################################################################
+  
+    
     #
     # output list of red contigs for creating fasta
     selected_contigs <- data.frame(matrix(NA,nrow=length(unique(sample_cns$gene)),ncol=2))
@@ -1232,28 +1266,6 @@ for(d in directories){
                 sep=",",row.names = F, col.names = T)
     
     
-    
-    # table included
-    sample_cns_included_contigs <- sample_cns_unfiltered %>% filter(CNA == "loss")
-    included_contigs_vector <- sample_cns_included_contigs$gene
-    
-    maximum_included <- c()
-    for(i in seq(1,nrow(sample_cns),1)){
-      included_rows_vector <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
-                                        which(sample_cns_included_contigs$end <= sample_cns$end[i]))
-      maximum_included <- append(maximum_included,length(included_rows_vector)) }
-    
-    included_contigs <- data.frame(matrix(NA,nrow=max(maximum_included), ncol=nrow(sample_cns)))
-    colnames(included_contigs) <- as.character(sample_cns$gene)
-    for(i in seq(1,nrow(sample_cns),1)){
-      included_rows <- intersect(which(sample_cns_included_contigs$start >= sample_cns$start[i]), 
-                                 which(sample_cns_included_contigs$end <= sample_cns$end[i]))
-      if(length(included_rows) != 0){
-        included_contigs[1:length(included_rows),i] <- as.character(sample_cns_included_contigs$gene[included_rows])
-      } }
-    write.table(included_contigs, 
-                file=paste(dir,"chromosome","included_contigs.csv",sep="_"), 
-                sep=",", row.names = F, na="")
     
     
     #
