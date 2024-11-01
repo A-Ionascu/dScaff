@@ -518,6 +518,8 @@ for(d in directories){
       
       sample_cns <- sample_cns %>% filter(CNA == "gain")
       
+      if(nrow(sample_cns) > 0){
+      
       coverage_lengths <- c()
       i <- 1
       while(i < nrow(sample_cns)){
@@ -652,7 +654,7 @@ for(d in directories){
                   sep=",",row.names = F, col.names = T)
       
       
-      
+      }else{ next }
       
       #
       #setwd(file.path(mainDir,dir,"scaffolds",s))
@@ -1132,6 +1134,8 @@ for(d in directories){
     
     sample_cns <- sample_cns %>% filter(CNA == "gain")
     
+    if(nrow(sample_cns) > 0){ 
+    
     coverage_lengths <- c()
     i <- 1
     while(i < nrow(sample_cns)){
@@ -1266,7 +1270,7 @@ for(d in directories){
                 sep=",",row.names = F, col.names = T)
     
     
-    
+    }else{ next }
     
     #
     ###########################################################################
