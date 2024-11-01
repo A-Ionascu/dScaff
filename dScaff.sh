@@ -195,14 +195,15 @@ awk -F "," 'NR > 1 {print $2":"$3"-"$4}' *_filtered.csv > query_headers.txt
 sed -i 's/"//g' query_headers.txt
 
 cd $CWD/$subdir
-grep ">" $query | sed 's/>//g' > headers_list_db.txt
-
+####################################################################################################################################
+grep ">" $CWD/$query | sed 's/>//g' > headers_list_db.txt
+####################################################################################################################################
 cd $line
 cat query_headers.txt | while read subquery; do grep $subquery ../headers_list_db.txt >> query_headers_db.txt; done
 
-
-seqtk subseq $query query_headers_db.txt > queries_of_interest.fasta
-
+####################################################################################################################################
+seqtk subseq $CWD/$query query_headers_db.txt > queries_of_interest.fasta
+####################################################################################################################################
 mkdir queries
 
 awk -F ">| " '/^>/ {s=$2".query.fasta"}; {print > s}' queries_of_interest.fasta
@@ -333,6 +334,9 @@ mv *.fasta tmp
 	rm -r contigs_chr_loc.txt
 	rm -r *.dScaff.assembly1.fasta
 	rm -r *.selected.headers.txt
+	######################deni 31 oct
+	rm -r *_selected_contigs.csv
+	######################deni 31 oct
 	sed -i 's/_chromosome//g' *_dScaff_assembly.fasta
 ##################################################################################################################
 
@@ -376,6 +380,9 @@ mv *.fasta tmp
 		rm -r contigs_chr_loc.txt
 		rm -r *.dScaff.assembly1.fasta
 		rm -r *.selected.headers.txt
+		######################deni 31 oct
+		rm -r *_selected_contigs.csv
+		######################deni 31 oct
 		sed -i 's/_scaffold//g' *_dScaff_assembly.fasta
 
 ##################################################################################################################
@@ -389,9 +396,6 @@ mv *.fasta tmp
 		rm *.fa
 		fi
 #######################################
-#cd $CWD/$subdir/$line/scaffolds
-#find . -type f -name *_dScaff_assembly.fasta -exec cat > $line"_dScaff.fasta" {} +
-
 cd $CWD/$subdir
 
 find . -type f -name *_dScaff_assembly.fasta -exec cat > dScaff.fasta {} +
