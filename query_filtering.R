@@ -69,7 +69,9 @@ for(f in tsv.files){
   chr$result[1] <- paste("good")
   chr$locus[1] <- paste( chr_full$X7[1] )
   chr$gene[1] <- paste( chr_full$X6[1] )
-  chr$full_id[1] <- paste(chr_full$X1[1],":",chr_full$X2[1],"-",chr_full$X3[1],
+  chr$full_id[1] <- paste(chr_full$X1[1],":",
+                          format(chr_full$X2[1], scientific = F), "-",
+                          format(chr_full$X3[1], scientific = F),
                           sep="")
 
   i <- 1 # pentru stop
@@ -82,7 +84,9 @@ for(f in tsv.files){
       chr$result[j] <- paste("good")
       chr$locus[j] <- paste( chr_full$X7[j] )
       chr$gene[j] <- paste( chr_full$X6[j] )
-      chr$full_id[j] <- paste(chr_full$X1[j],":",chr_full$X2[j],"-",chr_full$X3[j],
+      chr$full_id[j] <- paste(chr_full$X1[j],":",
+                              format(chr_full$X2[j], scientific = F), "-",
+                              format(chr_full$X3[j], scientific = F),
                               sep="")
       i <- j
       j <- j+1
@@ -106,7 +110,9 @@ for(f in tsv.files){
         chr$g2[j] <- paste(j) # write row of gene 2 (start)
         chr$locus[j] <- paste(chr_full$X7[j]) # write locus name
         chr$gene[j] <- paste( chr_full$X6[j] ) # write gene name
-        chr$full_id[j] <- paste(chr_full$X1[j],":",chr_full$X2[j],"-",chr_full$X3[j],
+        chr$full_id[j] <- paste(chr_full$X1[j],":",
+                                format(chr_full$X2[j], scientific = F), "-",
+                                format(chr_full$X3[j], scientific = F),
                                 sep="") # write full gene id from ref
     
         i <- j # jump to the gene that satisfied condition

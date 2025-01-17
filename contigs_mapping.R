@@ -24,6 +24,9 @@ parm7 <- as.numeric(unlist(strsplit(parameters[7,], " "))[3])
 parm8 <- as.numeric(unlist(strsplit(parameters[8,], " "))[3])
 #
 
+# importing all contig lenghts
+contig_lengths <- read.csv("lungimi_contiguri.csv", header = FALSE, col.names = c("contig","contig_length"))
+#
 
 mainDir <- (paste(getwd(),sep=""))
 
@@ -111,6 +114,8 @@ for(d in directories){
   contigs_of_interest <- add_column(contigs_of_interest, ref_scaff=NA, .after="gene_length")
   contigs_of_interest <- add_column(contigs_of_interest, scaff_start=NA, .after="ref_scaff")
   contigs_of_interest <- add_column(contigs_of_interest, scaff_stop=NA, .after="scaff_start")
+  contigs_of_interest <- add_column(contigs_of_interest, orientation=NA, .after="scaff_stop")
+  contigs_of_interest <- add_column(contigs_of_interest, contig_length=NA, .after="orientation")
   
   for(i in seq(1,nrow(contigs_of_interest),1)){
   
@@ -119,6 +124,12 @@ for(d in directories){
   contigs_of_interest$ref_scaff[i] <- genes_of_interest$scaff[which(genes_of_interest$full_id == contigs_of_interest$query_name[i])]
   contigs_of_interest$scaff_start[i] <- genes_of_interest$start[which(genes_of_interest$full_id == contigs_of_interest$query_name[i])]
   contigs_of_interest$scaff_stop[i] <- genes_of_interest$stop[which(genes_of_interest$full_id == contigs_of_interest$query_name[i])]
+  
+  if(contigs_of_interest$subject_start[i] < contigs_of_interest$subject_end[i]){
+    contigs_of_interest$orientation[i] <- c("plus")  }
+  else{ contigs_of_interest$orientation[i] <- c("minus") }
+  
+  contigs_of_interest$contig_length[i] <- contig_lengths$contig_length[which(contig_lengths$contig == contigs_of_interest$subject_name[i])]
   
   }
 
@@ -263,13 +274,20 @@ for(d in directories){
         chromosome = scaff$query_name, 
         start = c(scaff$genomic_start), end = c(scaff$genomic_end), 
         cn = c(rep(1L,nrow(scaff))), CNA = c(rep("gain",nrow(scaff))),
-        size = c(rep(max(scaff$scaff_stop), nrow(scaff) ))
+        size = c(rep(max(scaff$scaff_stop), nrow(scaff))),
+        orientation = scaff$orientation,
+        contig_start = scaff$subject_start,
+        contig_end = scaff$subject_end,
+        contig_length = scaff$contig_length
       ),
       
-      .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size"),
+      .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size","orientation","contig_start","contig_end","contig_length"),
       row.names = c(NA,nrow(scaff)), class = "data.frame" )
       
-      
+      #sample_cns <- add_column(sample_cns, contig_length=NA, .after="contig_end")
+      #for(i in seq(1,nrow(sample_cns),1)){
+      #  sample_cns$contig_length[i] <- contig_lengths$contig_length[which(contig_lengths$contig == sample_cns$gene[i])]
+      #}
       ##############################################################################
       
       
@@ -288,6 +306,25 @@ for(d in directories){
       
       ##############################################################################
       
+      table_orientation <- data.frame(matrix(NA,nrow=0,ncol=3))
+      colnames(table_orientation) <- c("Contig","Plus_fragments","Minus_fragments")
+      or <- c(1)
+      for(i in unique(sample_cns$gene)){
+        contig <- sample_cns %>% filter(gene == i)
+        plus_count <- sum(contig$orientation == "plus")
+        minus_count <- sum(contig$orientation == "minus")
+        table_orientation[or,1] <- i
+        table_orientation[or,2] <- plus_count
+        table_orientation[or,3] <- minus_count
+        or <- or+1
+      }
+      write.table(table_orientation, 
+                  file=paste(dir,"scaffold",s,"all_contigs_orientation.csv",sep="_"), 
+                  sep=",", row.names = F, na="")
+      
+      
+      
+      ##
       for(i in unique(sample_cns$gene)){
         
         contig <- sample_cns %>%
@@ -295,12 +332,18 @@ for(d in directories){
         
         if(nrow(contig) > 1){
           
-          rows <- which(sample_cns$gene == contig$gene[1])
+          #rows <- which(sample_cns$gene == contig$gene[1])
+          
+          rows <- c()
+          for(r in seq(1,nrow(contig),1)){
+            rows <- append(rows,which(unique(sample_cns$chromosome) == contig$chromosome[r]))
+          }
           
           outliers <- boxplot.stats(rows)$out
           while(length(outliers) != 0){
-            for(o in seq(1,length(outliers),1)){
-              remove_row <- which(rows == outliers[o])
+            #for(o in seq(1,length(outliers),1)){
+            for(o in unique(outliers)){
+              remove_row <- which(rows == o) #which(rows == outliers[o])
               contig <- contig[-remove_row,]
               rows <- rows[-remove_row]
             }
@@ -321,11 +364,29 @@ for(d in directories){
                   for(sequence in seq(1,length(breaks_list),1)){
                     
                     if(length(breaks_list[[sequence]]) >= parm7){ #### aici era 3
-                      partial_contig <- sample_cns[breaks_list[[sequence]],]
+                      #partial_contig <- sample_cns[breaks_list[[sequence]],]
+                      partial_contig <- contig[which(contig$chromosome %in% unique(sample_cns$chromosome)[breaks_list[[sequence]]]),]
                       edited_sample_cns[n,] <- partial_contig[1,]
                       edited_sample_cns$start[n] <- min(partial_contig$start)
                       edited_sample_cns$end[n] <- max(partial_contig$end)
-                      edited_sample_cns$fragments[n] <- nrow(partial_contig)
+                      edited_sample_cns$fragments[n] <- length(unique(partial_contig$chromosome))
+                      ## orientation
+                      orientation <- c(partial_contig$orientation)
+                      plus_count <- sum(orientation == "plus")
+                      minus_count <- sum(orientation == "minus")
+                      if(plus_count > minus_count){
+                        edited_sample_cns$orientation[n] <- "plus"
+                        edited_sample_cns$contig_start[n] <- min(partial_contig$contig_start)
+                        edited_sample_cns$contig_end[n] <- max(partial_contig$contig_end) }
+                      if(plus_count < minus_count){
+                        edited_sample_cns$orientation[n] <- "minus"
+                        edited_sample_cns$contig_start[n] <- max(partial_contig$contig_start)
+                        edited_sample_cns$contig_end[n] <- min(partial_contig$contig_end)  }
+                      if(plus_count == minus_count){
+                        edited_sample_cns$orientation[n] <- "undecided"
+                        edited_sample_cns$contig_start[n] <- min(partial_contig$contig_start)
+                        edited_sample_cns$contig_end[n] <- max(partial_contig$contig_end)}
+                      ##
                       n <- n+1
                     }
                   }
@@ -346,7 +407,22 @@ for(d in directories){
           edited_sample_cns[n,] <- contig[1,]
           edited_sample_cns$start[n] <- min(contig$start)
           edited_sample_cns$end[n] <- max(contig$end)
-          edited_sample_cns$fragments[n] <- nrow(contig)
+          edited_sample_cns$fragments[n] <- length(unique(contig$chromosome))
+          orientation <- c(contig$orientation)
+          plus_count <- sum(orientation == "plus")
+          minus_count <- sum(orientation == "minus")
+          if(plus_count > minus_count){
+            edited_sample_cns$orientation[n] <- "plus"
+            edited_sample_cns$contig_start[n] <- min(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- max(contig$contig_end)  }
+          if(plus_count < minus_count){
+            edited_sample_cns$orientation[n] <- "minus"
+            edited_sample_cns$contig_start[n] <- max(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- min(contig$contig_end)   }
+          if(plus_count == minus_count){
+            edited_sample_cns$orientation[n] <- "undecided"
+            edited_sample_cns$contig_start[n] <- min(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- max(contig$contig_end)   }
           n <- n+1 }
       }
       
@@ -473,6 +549,7 @@ for(d in directories){
       
       sample_cns_unfiltered <- sample_cns
       
+      
       chrom_sizes <- structure(list(
         chromosome = unique(sample_cns$gene), 
         size = rep(c(max(sample_cns$size)),length(unique(sample_cns$gene)))),
@@ -518,8 +595,57 @@ for(d in directories){
       
       sample_cns <- sample_cns %>% filter(CNA == "gain")
       
+      ##
+      for(t in unique(sample_cns$gene)){
+        contig <- sample_cns %>% filter(gene == t)
+        if(nrow(contig) > 1){
+          
+          plus_subtable <-  contig %>% filter(orientation == "plus")
+          minus_subtable <-  contig %>% filter(orientation == "minus")
+          
+          if(sum(plus_subtable$fragments) > sum(minus_subtable$fragments)){
+            sample_cns$orientation[which(sample_cns$gene == t)] <- c("plus") }
+          if(sum(plus_subtable$fragments) < sum(minus_subtable$fragments)){
+            sample_cns$orientation[which(sample_cns$gene == t)] <- c("minus") }
+          if(sum(plus_subtable$fragments) == sum(minus_subtable$fragments)){
+            sample_cns$orientation[which(sample_cns$gene == t)] <- c("undecided") }
+        }
+      }
+      ##
+      if(nrow(sample_cns_unfiltered > 0)){
+        sample_cns_unfiltered_backup <- sample_cns_unfiltered
+        # output table of all contigs of interest
+        sample_cns_unfiltered <- sample_cns_unfiltered[,-7]
+        sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+          mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
+        sample_cns_unfiltered <- sample_cns_unfiltered %>% 
+          mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
+        sample_cns_unfiltered <- sample_cns_unfiltered %>% add_column(ctg_size = rep(NA,nrow(sample_cns_unfiltered)), .after = "end")
+        for(csize in seq(1,nrow(sample_cns_unfiltered),1)){
+          sample_cns_unfiltered$ctg_size[csize] <- (sample_cns_unfiltered$end[csize] - sample_cns_unfiltered$start[csize]) + 1
+        }
+        colnames(sample_cns_unfiltered) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
+                                             "Query_size","Filter","Subject_size","Hit_fragments","Orientation",
+                                             "Contig_start","Contig_end","Contig_length")
+        write.table(sample_cns_unfiltered, 
+                    file=paste(dir,"scaffold",s,"processed_red_blue_contigs.csv",sep="_"),
+                    sep=",",row.names = F, col.names = T)
+      }
+      
+      
+      ##
       if(nrow(sample_cns) > 0){
       
+        merged_orientation <- subset(table_orientation, Contig %in% sample_cns$gene)
+        undecided_orientation <- subset(merged_orientation, Plus_fragments != 0 & Minus_fragments != 0)
+        write.table(merged_orientation, 
+                    file=paste(dir,"scaffold",s,"contigs_of_interest_orientation.csv",sep="_"), 
+                    sep=",", row.names = F, na="")
+        write.table(undecided_orientation, 
+                    file=paste(dir,"scaffold",s,"contigs_undecided_orientation.csv",sep="_"), 
+                    sep=",", row.names = F, na="")
+        
+        
       coverage_lengths <- c()
       i <- 1
       while(i < nrow(sample_cns)){
@@ -588,6 +714,7 @@ for(d in directories){
       ########################################################################
       
       # table included
+      sample_cns_unfiltered <- sample_cns_unfiltered_backup
       sample_cns_included_contigs <- sample_cns_unfiltered %>% filter(CNA == "loss")
       included_contigs_vector <- sample_cns_included_contigs$gene
       
@@ -622,21 +749,7 @@ for(d in directories){
                   sep=",",row.names = F, col.names = FALSE)
       
       
-      # output table of all contigs of interest
-      sample_cns_unfiltered <- sample_cns_unfiltered[,-7]
-      sample_cns_unfiltered <- sample_cns_unfiltered %>% 
-        mutate(CNA = ifelse(as.character(CNA) == "gain", "red", as.character(CNA)))
-      sample_cns_unfiltered <- sample_cns_unfiltered %>% 
-        mutate(CNA = ifelse(as.character(CNA) == "loss", "blue", as.character(CNA)))
-      sample_cns_unfiltered <- sample_cns_unfiltered %>% add_column(ctg_size = rep(NA,nrow(sample_cns_unfiltered)), .after = "end")
-      for(csize in seq(1,nrow(sample_cns_unfiltered),1)){
-        sample_cns_unfiltered$ctg_size[csize] <- (sample_cns_unfiltered$end[csize] - sample_cns_unfiltered$start[csize]) + 1
-      }
-      colnames(sample_cns_unfiltered) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
-                                           "Query_size","Filter","Subject_size","Hit_fragments")
-      write.table(sample_cns_unfiltered, 
-                  file=paste(dir,"scaffold",s,"processed_red_blue_contigs.csv",sep="_"),
-                  sep=",",row.names = F, col.names = T)
+
       
       sample_cns <- sample_cns[,-7]
       sample_cns <- sample_cns %>% 
@@ -648,7 +761,8 @@ for(d in directories){
         sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1
       }
       colnames(sample_cns) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
-                                           "Query_size","Filter","Subject_size","Hit_fragments")
+                                "Query_size","Filter","Subject_size","Hit_fragments","Orientation",
+                                "Contig_start","Contig_end","Contig_length")
       write.table(sample_cns, 
                   file=paste(dir,"scaffold",s,"minimal_contigs.csv",sep="_"),
                   sep=",",row.names = F, col.names = T)
@@ -880,11 +994,20 @@ for(d in directories){
       chromosome = scaff$query_name, 
       start = c(scaff$genomic_start), end = c(scaff$genomic_end), 
       cn = c(rep(1L,nrow(scaff))), CNA = c(rep("gain",nrow(scaff))),
-      size = c(rep(max(scaff$scaff_stop), nrow(scaff) ))
-    ),
+      size = c(rep(max(scaff$scaff_stop), nrow(scaff))),
+      orientation = scaff$orientation,
+      contig_start = scaff$subject_start,
+      contig_end = scaff$subject_end,
+      contig_length = scaff$contig_length
+      ),
     
-    .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size"),
+    .Names = c("gene", "chromosome", "start", "end", "cn", "CNA","size","orientation","contig_start","contig_end","contig_length"),
     row.names = c(NA,nrow(scaff)), class = "data.frame" )
+    
+    #sample_cns <- add_column(sample_cns, contig_length=NA, .after="contig_end")
+    #for(i in seq(1,nrow(sample_cns),1)){
+    #  sample_cns$contig_length[i] <- contig_lengths$contig_length[which(contig_lengths$contig == sample_cns$gene[i])]
+    #}
     
     ##############################################################################
     
@@ -903,6 +1026,22 @@ for(d in directories){
     
     #########################################################################
     ########################################################################
+    table_orientation <- data.frame(matrix(NA,nrow=0,ncol=3))
+    colnames(table_orientation) <- c("Contig","Plus_fragments","Minus_fragments")
+    or <- c(1)
+    for(i in unique(sample_cns$gene)){
+      contig <- sample_cns %>% filter(gene == i)
+      plus_count <- sum(contig$orientation == "plus")
+      minus_count <- sum(contig$orientation == "minus")
+      table_orientation[or,1] <- i
+      table_orientation[or,2] <- plus_count
+      table_orientation[or,3] <- minus_count
+      or <- or+1
+    }
+    write.table(table_orientation, 
+                file=paste(dir,"chromosome","all_contigs_orientation.csv",sep="_"), 
+                sep=",", row.names = F, na="")
+    
     
     for(i in unique(sample_cns$gene)){
       
@@ -911,12 +1050,18 @@ for(d in directories){
       
       if(nrow(contig) > 1){
         
-        rows <- which(sample_cns$gene == contig$gene[1])
+        #rows <- which(sample_cns$gene == contig$gene[1])
+        
+        rows <- c()
+        for(r in seq(1,nrow(contig),1)){
+          rows <- append(rows,which(unique(sample_cns$chromosome) == contig$chromosome[r]))
+        }
         
         outliers <- boxplot.stats(rows)$out
         while(length(outliers) != 0){
-          for(o in seq(1,length(outliers),1)){
-            remove_row <- which(rows == outliers[o])
+          #for(o in seq(1,length(outliers),1)){
+          for(o in unique(outliers)){
+            remove_row <- which(rows == o) #which(rows == outliers[o])
             contig <- contig[-remove_row,]
             rows <- rows[-remove_row]
           }
@@ -937,11 +1082,29 @@ for(d in directories){
                 for(sequence in seq(1,length(breaks_list),1)){
                   
                   if(length(breaks_list[[sequence]]) >= parm7){ #### aici era 3
-                    partial_contig <- sample_cns[breaks_list[[sequence]],]
+                    #partial_contig <- sample_cns[breaks_list[[sequence]],]
+                    partial_contig <- contig[which(contig$chromosome %in% unique(sample_cns$chromosome)[breaks_list[[sequence]]]),]
                     edited_sample_cns[n,] <- partial_contig[1,]
                     edited_sample_cns$start[n] <- min(partial_contig$start)
                     edited_sample_cns$end[n] <- max(partial_contig$end)
                     edited_sample_cns$fragments[n] <- length(unique(partial_contig$chromosome))
+                    ## orientation
+                    orientation <- c(partial_contig$orientation)
+                    plus_count <- sum(orientation == "plus")
+                    minus_count <- sum(orientation == "minus")
+                    if(plus_count > minus_count){
+                      edited_sample_cns$orientation[n] <- "plus"
+                      edited_sample_cns$contig_start[n] <- min(partial_contig$contig_start)
+                      edited_sample_cns$contig_end[n] <- max(partial_contig$contig_end) }
+                    if(plus_count < minus_count){
+                      edited_sample_cns$orientation[n] <- "minus"
+                      edited_sample_cns$contig_start[n] <- max(partial_contig$contig_start)
+                      edited_sample_cns$contig_end[n] <- min(partial_contig$contig_end)  }
+                    if(plus_count == minus_count){
+                      edited_sample_cns$orientation[n] <- "undecided"
+                      edited_sample_cns$contig_start[n] <- min(partial_contig$contig_start)
+                      edited_sample_cns$contig_end[n] <- max(partial_contig$contig_end)}
+                    ##
                     n <- n+1
                   }
                 }
@@ -963,6 +1126,18 @@ for(d in directories){
         edited_sample_cns$start[n] <- min(contig$start)
         edited_sample_cns$end[n] <- max(contig$end)
         edited_sample_cns$fragments[n] <- length(unique(contig$chromosome))
+        if(plus_count > minus_count){
+            edited_sample_cns$orientation[n] <- "plus"
+            edited_sample_cns$contig_start[n] <- min(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- max(contig$contig_end)  }
+          if(plus_count < minus_count){
+            edited_sample_cns$orientation[n] <- "minus"
+            edited_sample_cns$contig_start[n] <- max(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- min(contig$contig_end)   }
+          if(plus_count == minus_count){
+            edited_sample_cns$orientation[n] <- "undecided"
+            edited_sample_cns$contig_start[n] <- min(contig$contig_start)
+            edited_sample_cns$contig_end[n] <- max(contig$contig_end)   }
         n <- n+1 }
     }
     
@@ -1134,6 +1309,33 @@ for(d in directories){
     
     sample_cns <- sample_cns %>% filter(CNA == "gain")
     
+    ##
+    for(t in unique(sample_cns$gene)){
+      contig <- sample_cns %>% filter(gene == t)
+      if(nrow(contig) > 1){
+        
+        plus_subtable <-  contig %>% filter(orientation == "plus")
+        minus_subtable <-  contig %>% filter(orientation == "minus")
+        
+        if(sum(plus_subtable$fragments) > sum(minus_subtable$fragments)){
+          sample_cns$orientation[which(sample_cns$gene == t)] <- c("plus") }
+        if(sum(plus_subtable$fragments) < sum(minus_subtable$fragments)){
+          sample_cns$orientation[which(sample_cns$gene == t)] <- c("minus") }
+        if(sum(plus_subtable$fragments) == sum(minus_subtable$fragments)){
+          sample_cns$orientation[which(sample_cns$gene == t)] <- c("undecided") }
+      }
+    }
+    ##
+    merged_orientation <- subset(table_orientation, Contig %in% sample_cns$gene)
+    undecided_orientation <- subset(merged_orientation, Plus_fragments != 0 & Minus_fragments != 0)
+    write.table(merged_orientation, 
+                file=paste(dir,"chromosome","contigs_of_interest_orientation.csv",sep="_"), 
+                sep=",", row.names = F, na="")
+    write.table(undecided_orientation, 
+                file=paste(dir,"chromosome","contigs_undecided_orientation.csv",sep="_"), 
+                sep=",", row.names = F, na="")
+    ##
+    
     if(nrow(sample_cns) > 0){ 
     
     coverage_lengths <- c()
@@ -1249,7 +1451,8 @@ for(d in directories){
       sample_cns_unfiltered$ctg_size[csize] <- (sample_cns_unfiltered$end[csize] - sample_cns_unfiltered$start[csize]) + 1
     }
     colnames(sample_cns_unfiltered) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
-                                         "Query_size","Filter","Subject_size","Hit_fragments")
+                                         "Query_size","Filter","Subject_size","Hit_fragments","Orientation",
+                                         "Contig_start","Contig_end","Contig_length")
     write.table(sample_cns_unfiltered, 
                 file=paste(dir,"chromosome","processed_red_blue_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
@@ -1264,7 +1467,8 @@ for(d in directories){
       sample_cns$ctg_size[csize] <- (sample_cns$end[csize] - sample_cns$start[csize]) + 1
     }
     colnames(sample_cns) <- c("Contig","Query","Query_code","Query_coordinates","Query_start","Query_end",
-                              "Query_size","Filter","Subject_size","Hit_fragments")
+                              "Query_size","Filter","Subject_size","Hit_fragments","Orientation",
+                              "Contig_start","Contig_end","Contig_length")
     write.table(sample_cns, 
                 file=paste(dir,"chromosome","minimal_contigs.csv",sep="_"),
                 sep=",",row.names = F, col.names = T)
@@ -1323,7 +1527,4 @@ for(d in directories){
   
   
   
-  
-  
-############
 
