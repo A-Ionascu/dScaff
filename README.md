@@ -1,14 +1,12 @@
 # dScaff
-Scaffolding strategy for draft assemblies (contigs) based on reference genes annotations.
+Scaffolding strategy for draft assemblies (contigs) based on reference assembly using either genes queries or ranked queries.
 
 <div align="justify">
 
 #
 ### Strategy:
 
-Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms that have a better reference assebly in with annotated genes in various databases. This strategy is most valuable when performing *de novo* assemblies of local species. The inplemented strategy aims to use the draft assembly, sequences of all genes from the reference genome and a table of their annotation in order to enhance scaffolding posibilities.
-
-**dScaff** recognizez the chromosomes associated to annotated genes in the reference genome and creates separate working directories. The script makes a subselection of genes that are more than 15k nt apart in the reference genome and performs BLAST between the sequences of these genes and the draft assembly. The BLAST results for each chromosome or for each scaffold within a chromosome which are filtered to only select genes longer than 2.5k nt and also select alingments that are at 30% of the gene length. The final results are an indexed table and a map of draft assembly contigs in reference genome order. 
+Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms that have an NCBI reference assembly. This strategy is most valuable when performing *de novo* assemblies of local species. Two strategies are available, one using the gene annotations for the reference assembly and one using consecutive reference fragments obtained with the [SubSequencesExtractor](https://github.com/DL-UB/SubSequencesExtractor) complementary script.
 
 #
 #
@@ -20,7 +18,7 @@ Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms 
 + Run the requirements.sh script in order to download R, seqtk and ncbi-blast+ packages. 
 + Open a bash terminal, enter R environment with the *R* command. Inside the R environment run the *install.packges("dplyr")* command and type *yes* for each threshold. This step was required during testing on a Linux Mint 21.3 system, for locally installing R packages. Other operating systems might not require this step.
 + Make sure the main script is executable.
-+ Keep the *dScaff.sh* , *gene_filtering.R* and *contigs_mapping.R* files in the same directory.
++ Keep the *dScaff.sh* , *query_filtering.R* and *contigs_mapping.R* files in the same directory.
 
 #
 #
@@ -29,12 +27,14 @@ Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms 
 Information about **dScaff** can be obtained by running the script with the *-h* or *--help* command. The script should be run from its main directory with either *bash* , *sh* or *./* prefixes. 
 
 **dScaff** takes as arguments:  
--a, --assembly    Draft assembly in FASTA format\
--g, --genes       gene.fna file with gene sequences from reference genome\
--d, --dataset     ncbi_dataset.tsv containing all genes in reference genome
+-a, --assembly            Draft assembly in FASTA format\
+-q, --query               gene.fna file with gene sequences from reference genome or ranked queries.fasta output of ranked queries [SubSequencesExtractor.sh script](https://github.com/DL-UB/SubSequencesExtractor)\
+-d, --dataset             ncbi_dataset.tsv containing all genes in reference genome\
+-gq, --gene_queries       perform gene queries strategy\
+-rq, --ranked_queries     perform ranked queries strategy
 
 
-It is recommended to use the absolute paths for each file. The script will only work if all three arguments are provided. The file names should not contain dots in the name.
+It is recommended to use the absolute paths for each file. The script will only work if all four arguments are provided. The file names should not contain dots in the name.
 
 #
 #
