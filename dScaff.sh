@@ -4,18 +4,23 @@
 # -a (assembly) = draft assembly in FASTA format
 # -q (query) = gene.fna file with gene sequences from reference genome or ranked_queries.fasta output of ranked queries SubSequencesExtractor.sh script
 # -d (dataset) = ncbi_dataset.tsv containing all genes in reference genome or coordinates_dataset.csv output of ranked queries SubSequencesExtractor.sh script
+# -gq for gene queries strategy
+# -rq for ranked queries strategy
+
 
 
 # Define the help method
 get_help() {
   echo " "
-  echo "Usage: $(basename $0) [-h] [-a FILE] [-q FILE] [-d FILE]"
+  echo "Usage: $(basename $0) [-h] [-a FILE] [-q FILE] [-d FILE] [OPTION]"
   echo " "
   echo "Options:"
-  echo "  -h, --help        Display this help message"
-  echo "  -a, --assembly    Draft assembly in FASTA format"
-  echo "  -q, --query     gene.fna file with gene sequences from reference genome or ranked_queries.fasta output of ranked queries SubSequencesExtractor.sh script"
-  echo "  -d, --dataset     ncbi_dataset.tsv containing all genes in reference genome or coordinates_dataset.csv output of ranked queries SubSequencesExtractor.sh script"
+  echo "  -h, --help			Display this help message"
+  echo "  -a, --assembly		Draft assembly in FASTA format"
+  echo "  -q, --query			gene.fna file with gene sequences from reference genome or ranked_queries.fasta output of ranked queries SubSequencesExtractor.sh script"
+  echo "  -d, --dataset			ncbi_dataset.tsv containing all genes in reference genome or coordinates_dataset.csv output of ranked queries SubSequencesExtractor.sh script"
+  echo "  -gq, --gene_queries		Perform gene queries strategy"
+  echo "  -rq, --ranked_queries		Perform ranked queries strategy"
   echo " "
   echo "Use files from working directory or provide absolute path to input files."
   echo " "
@@ -34,15 +39,21 @@ if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
   get_help
 fi
 
+# Initialize variables
+assembly=""
+query=""
+dataset=""
+strategy=""
+
 while [ ! -z "$1" ]; do
   case "$1" in
      --assembly|-a)
          shift
          echo " "
          echo "Input draft assembly is: $1"
-         #echo " "
          assembly=$1
          if [ -z "$1" ]; then
+            echo " "
             echo "Error: Missing argument for draft assembly file."
             echo " "
             exit 1
@@ -52,9 +63,9 @@ while [ ! -z "$1" ]; do
          shift
          echo " "
          echo "Input reference query sequences is: $1"
-         #echo " "
          query=$1
          if [ -z "$1" ]; then
+            echo " "
             echo "Error: Missing argument for reference query sequences."
             echo " "
             exit 1
@@ -64,46 +75,59 @@ while [ ! -z "$1" ]; do
         shift
         echo " "
         echo "Input dataset is: $1"
-        #echo " "
         dataset=$1 
         if [ -z "$1" ]; then
+            echo " "
             echo "Error: Missing argument for dataset."
             echo " "
             exit 1
          fi         
         ;;
+     --gene_queries|-gq)
+         echo " "
+         echo "Gene queries strategy selected."
+         strategy="gene_queries"
+         ;;
+     --ranked_queries|-rq)
+         echo " "
+         echo "Ranked queries strategy selected."
+         strategy="ranked_queries"
+         ;;
      *)
         get_help
         ;;
   esac
-shift
+  shift
 done
 
-if [ "$assembly" == "" ]; then
+# Validate required inputs
+if [ -z "$assembly" ]; then
+    echo " "
     echo "Error: Missing input draft assembly file"
     echo " "
     exit 1
 fi
-if [ "$query" == "" ]; then
+if [ -z "$query" ]; then
+    echo " "
     echo "Error: Missing input reference query file"
     echo " "
     exit 1
 fi
-if [ "$dataset" == "" ]; then
+if [ -z "$dataset" ]; then
+    echo " "
     echo "Error: Missing input dataset file"
     echo " "
     exit 1
 fi
 
+# Check if a strategy was selected
+if [ -z "$strategy" ]; then
+    echo " "
+    echo "Error: No strategy selected. Please use -gq for gene queries or -rq for ranked queries."
+    echo " "
+    exit 1
+fi
 
-#while getopts a:g:d: flag
-#do
-#    case "${flag}" in
-#        a) assembly=${OPTARG};;
-#        g) query=${OPTARG};;
-#        d) dataset=${OPTARG};;
-#    esac
-#done
 
 
 START=$(date +%s)
@@ -170,6 +194,8 @@ rm parameters_dScaff.txt
 ###
 
 cd $CWD
+#lungimi contiguri
+awk '$0 ~ ">" {if (NR > 1) {print c;} c=0;printf substr($1,2,100) ","; } $0 !~ ">" {c+=length($0);} END { print c; }' $assembly > lungimi_contiguri.csv
 
 echo "Preparing BLAST database ..."
 mkdir assembly_database
@@ -278,12 +304,14 @@ done
 cd $CWD
 cp contigs_mapping.R $subdir
 cp parameters_dScaff.txt $subdir
+mv lungimi_contiguri.csv $subdir 
 cd $subdir
 
 Rscript contigs_mapping.R 2> /dev/null &
 spinner $!
 #echo "Done!"
 rm parameters_dScaff.txt
+rm lungimi_contiguri.csv
 
 ############################
 cd $CWD
@@ -303,6 +331,9 @@ mv *.fasta tmp
 #######################################
 	if [ -d "chromosome" ]; then
 	cd chromosome/
+	if [ $strategy == "gene_queries" ]; then
+	rm *orientation.csv
+	fi
 ##################################################################################################################
 	sed -i 's/"//g' *selected_contigs.csv 
 	sed -i 's/,/ /g' *selected_contigs.csv
@@ -345,11 +376,16 @@ mv *.fasta tmp
 #######################################
 		if [ -d "scaffolds" ]; then
 		cd scaffolds 2> /dev/null
-		ls -d ./*/ | while read scaff
+		ls -d ./*/ | while read scaff 1> /dev/null
 		do
-		cd $scaff 
+		cd $scaff
+		if [ $strategy == "gene_queries" ]; then
+		rm *orientation.csv
+		fi 
 
 ##################################################################################################################
+		if test -f *selected_contigs.csv; then
+
 		sed -i 's/"//g' *selected_contigs.csv 
 		sed -i 's/,/ /g' *selected_contigs.csv
 #Pentru fiecare fisier care se termina cu selected_contigs.csv, il parcurg cu while, apoi extrag headerele de interes in baza fisierului cu all headers.
@@ -387,12 +423,14 @@ mv *.fasta tmp
 
 ##################################################################################################################
 		cp *.fasta ../
-		cd - 
+		fi
+		cd - 1> /dev/null
 		done
+		
 		line_name=$( echo $line | cut -c3- )
-		sudo cat *.fasta > ${line_name%/}"_dScaff_assembly.fa"
+		cat *.fasta > ${line_name%/}"_dScaff_assembly.fa"
 		rm *.fasta
-		sudo cat *.fa > ${line_name%/}"_dScaff_assembly.fasta"
+		cat *.fa > ${line_name%/}"_dScaff_assembly.fasta"
 		rm *.fa
 		fi
 #######################################
