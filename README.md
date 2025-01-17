@@ -6,7 +6,7 @@ Scaffolding strategy for draft assemblies (contigs) based on reference assembly 
 #
 ### Strategy:
 
-Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms that have an NCBI reference assembly. This strategy is most valuable when performing *de novo* assemblies of local species. Two strategies are available, one using the gene annotations for the reference assembly and one using consecutive reference fragments obtained with the SubSequencesExtractor complementary script.
+Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms that have an NCBI reference assembly. This strategy is most valuable when performing *de novo* assemblies of local species. Two strategies are available, one using the gene annotations for the reference assembly and one using consecutive reference fragments obtained with the [SubSequencesExtractor](https://github.com/DL-UB/SubSequencesExtractor) complementary script.
 
 #
 #
@@ -28,7 +28,7 @@ Information about **dScaff** can be obtained by running the script with the *-h*
 
 **dScaff** takes as arguments:  
 -a, --assembly            Draft assembly in FASTA format\
--q, --query               gene.fna file with gene sequences from reference genome or ranked queries.fasta output of ranked queries SubSequencesExtractor.sh script\
+-q, --query               gene.fna file with gene sequences from reference genome or ranked queries.fasta output of ranked queries [SubSequencesExtractor.sh script](https://github.com/DL-UB/SubSequencesExtractor)\
 -d, --dataset             ncbi_dataset.tsv containing all genes in reference genome\
 -gq, --gene_queries       perform gene queries strategy\
 -rq, --ranked_queries     perform ranked queries strategy
