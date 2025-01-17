@@ -154,7 +154,7 @@ if(interactive()){
                               The inplemented strategy aims to use the draft assembly, sequences of all genes from the reference genome 
                               and a table of their annotation in order to enhance scaffolding posibilities. Alternatively, the ranked queries 
                               strategy is suitable for reference assemblies without annotated genes and can be implemented using the ",
-                              tags$a(href="https://github.com/DL-UB/SubSequencesExtractor","SubSequenceExtractor")," complementary script."),
+                              tags$a(href="https://github.com/DL-UB/SubSequencesExtractor","SubSequencesExtractor")," complementary script."),
                            br(),
                            h4("dScaff ICA allows for image creation and easy modifications to images without running the main dScaff script.
                               The app uses dScaff output (contigs_of_interest.csv from tmp folder) and
