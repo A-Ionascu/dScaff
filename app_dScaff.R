@@ -167,7 +167,7 @@ if(interactive()){
     ))
     
   server <- function(input, output, session){ 
-    
+    options(shiny.maxRequestSize=100*1024^2)
     myData <- reactive({
       inFile <- input$file
       if(is.null(inFile)) return(NULL)
