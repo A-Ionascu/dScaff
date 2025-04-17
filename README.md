@@ -16,7 +16,7 @@ Digital Scaffolding (**dScaff**) aims improve new draft assemblies of organisms 
 
 + Download the files in this repository.
 + Run the requirements.sh script in order to download R, seqtk and ncbi-blast+ packages. 
-+ Open a bash terminal, enter R environment with the *R* command. Inside the R environment run the *install.packges("dplyr")* command and type *yes* for each threshold. This step was required during testing on a Linux Mint 21.3 system, for locally installing R packages. Other operating systems might not require this step.
++ Open a bash terminal, enter R environment with the *R* command. Inside the R environment run the *install.packages("dplyr")* command and type *yes* for each threshold. This step was required during testing on a Linux Mint 21.3 system, for locally installing R packages. Other operating systems might not require this step.
 + Make sure the main script is executable.
 + Keep the *dScaff.sh* , *query_filtering.R* and *contigs_mapping.R* files in the same directory.
 
